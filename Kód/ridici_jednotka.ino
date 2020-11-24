@@ -5,7 +5,11 @@
 
   SoftwareSerial HC12(10, 11);
 
-  int levy = 0,pravy = 0,w = 0,terc = 0;
+  int levy = 0,pravy = 0,UtokDokonceny = 0,terc = 0, x=0;
+  const int ledP = 6;
+  const int ledL = 5;
+
+  double L = 0, P = 0;
   
   double i = 0;
   double a = millis();
@@ -37,6 +41,13 @@
     lcd.begin(20, 4);
     lcd.clear();
     lcd.backlight();
+
+    pinMode(ledP, OUTPUT);
+    pinMode(ledL, OUTPUT);
+
+    digitalWrite(ledP, LOW);
+    digitalWrite(ledL, LOW);
+    
     for (int i = 0; i < pocetTlacitek; i++) {
       pinMode(pinyTlacitek[i], INPUT);
       digitalWrite(pinyTlacitek[i], HIGH); // pull-up 
@@ -55,9 +66,10 @@
  
 
   void loop() {
-  while (HC12.available()){
-    
-    //Serial.println(millis());
+   /* if ((menu == 8)&&(UtokDokonceny==1)){
+      menu = 9;
+    }    */
+    VypisMenu();
     for (int i = 0; i < pocetTlacitek; i++){
       int reading = digitalRead(pinyTlacitek[i]);
       if (reading != stare[i]) {
@@ -76,7 +88,14 @@
     for (int i = 0; i < pocetTlacitek; i++) {
       if (inputFlags[i] == HIGH) {
         if (i == 0) {
-           if ((menu == 1)&&(millis() > 6000)){
+           if (menu == 6){
+              if (moznost == 2) {
+                menu = 8;
+                moznost = 3;
+              }
+            }
+           
+           if ((menu == 1)&&(millis() > 5000)){
               if (moznost == 1){
                 menu = 3;
                 //moznost = 1;
@@ -95,19 +114,33 @@
               }
                 
             }
-          if (menu == 2){ //Pozarni utok
-            if (moznost == 3){ //Zpet
-              menu = 1;
-              moznost = 0;
-            }
-            if (moznost == 1){ //Automaticky
-              menu = 8;
-              moznost = 3;
-            }
-            if (moznost == 2){ //Manualne
-              
-            }
+            
+            if (menu == 2){ //Pozarni utok
+              //while (HC12.available()) {
+                if (moznost == 3){ //Zpet
+                  menu = 1;
+                  moznost = 0;
+                }
+                if (moznost == 1){ //Automaticky
+                  menu = 6;
+                  moznost = 2;
+                }
+                if (moznost == 2){ //Manualne
+              }
+                
+                
+              //}
+
+            
           }
+         
+          if (menu == 6){
+           
+              if (moznost == 3){ // ZPET
+                menu = 2;
+                moznost = 1;
+              }
+            }
           if (menu == 3){
             if (moznost == 3){
               menu = 1;
@@ -126,42 +159,79 @@
               moznost = 3;
             }
           }
-          if (menu == 6){
-            if (moznost == 2){
-              menu = 8;
+          if (menu == 9){  
+            if (x == 4){
+              UtokSmazan(); 
+              menu = 6;
               moznost = 3;
-            }
-            if (moznost == 3){
-              menu = 2;
-              moznost = 2;
+              x = 0;
             }
           }
+          
+          if ((menu == 8)&&(UtokDokonceny==1)){
+            if ((moznost == 3)&&(x == 13)){
+              menu = 9; //SMAZAT
+              moznost = 2;
+              x = 4;
+            }
+          }
+          
+          if ((menu == 8)&&(UtokDokonceny==1)){
+            if ((moznost == 3)&&(x == 0)){
+              menu = 6;
+              moznost = 3;
+            }
+          }    
+          if (menu == 9){
+            if (x == 11){
+              menu = 8; 
+              moznost = 3;
+              x = 0;
+            }
+          }    
+          
         }
         if (i == 1){
-          if (moznost == 0)
-            moznost = 3;
-          else 
-            moznost--;
+          if ((menu != 9)&&(menu!=8)){
+            if (moznost == 0){
+            moznost = 3;}
+          else {
+            moznost--;}
+          }
+          
+          if (menu == 8){
+            if (x == 13){
+              x = 0;}
+          }
+          if (menu == 9){
+            if (x == 11){
+              x = 4;}
+          }
         }
         if (i == 2){
-          if (moznost == 3)
-            moznost = 0;
-          else 
-            moznost++;
+          if ((menu != 9)&&(menu!=8)){
+            if (moznost == 3){
+              moznost = 0;}
+            else {
+              moznost++;}
+          }
+          if (menu == 8){
+            if (x == 0){
+              x = 13;}
+          }
+          if (menu == 9){
+            if (x == 4){
+              x = 11;}
+          }
         }
         //inputAction(i);
         inputFlags[i] = LOW;
-   
         Sipka(); 
         Menu();
       }
     }
-       
-    }
-    lcd.clear();
-    lcd.print("Unavailable");
-    delay(1000);
-    }
+  }
+
   void Menu()
   {
     switch (menu)
@@ -181,7 +251,7 @@
         break;
       case 2: //Pozarni utok
         {
-          if(HC12.available()){
+          //while(HC12.available()){
             lcd.setCursor(0,0);
             lcd.print(" == Pozarni utok == ");
             lcd.setCursor(1,1);
@@ -190,10 +260,12 @@
             lcd.print("Manualne");
             lcd.setCursor(1,3);
             lcd.print("Zpet");
-          }
-          else {
-            lcd.print("Zapni terce");
-          }
+          //}
+          //lcd.clear();
+          //lcd.setCursor(1,1);
+          //lcd.print("Zapni terce");
+            
+ 
           
         }
         break;
@@ -233,10 +305,11 @@
       case 6: //Automaticky
         {
          
+          UtokDokonceny = 0;
           lcd.setCursor(0,0);
           lcd.print(" == Automaticky ==  ");
           lcd.setCursor(1,2);
-          lcd.print("Spustit odpocet");
+          lcd.print("Spustit");
           lcd.setCursor(1,3);
           lcd.print("Zpet");
         }
@@ -254,22 +327,41 @@
         break;
       case 8: //Automaticky odpocet
         {
-          lcd.clear();
-          lcd.setCursor(0,1);
-          lcd.print("Zavodnici na mista");
-          delay(1000);
-          lcd.clear();
-          lcd.setCursor(0,1);
-          lcd.print("Pripravte se");
-          for (int i = 0; i < 3; i++){
-            lcd.print(" .");
-            delay(1000);
+          if (UtokDokonceny != 1){
+            
+            Automaticky();
+            Casomira();
+            lcd.setCursor(0,3);
+            lcd.print(">");
+            
           }
-          lcd.clear();
+          lcd.setCursor(0,0);
+          lcd.print("ID:  ");
+          lcd.setCursor(5,0);
+          lcd.print("cas  ");
+          lcd.setCursor(12,0);
+          lcd.print("datum");
           lcd.setCursor(0,1);
-          lcd.print("Pozor!");
-          delay(random(2000,4000));
-          Casomira();
+          lcd.print(i);
+          lcd.setCursor(8,1);
+          lcd.print(L);
+          lcd.setCursor(8,2);
+          lcd.print(P);
+          lcd.setCursor(1,3);
+          lcd.print("Zpet");
+          lcd.setCursor(14,3);
+          lcd.print("Smazat");
+        }
+        break;
+      case 9: //Smazat
+        {
+         
+          lcd.setCursor(2,1);
+          lcd.print("Opravdu smazat?");
+          lcd.setCursor(5,2);
+          lcd.print("Ano");
+          lcd.setCursor(12,2);
+          lcd.print("Ne");
         }
         break;
     }
@@ -277,24 +369,61 @@
 
   void Sipka()
   {
-    lcd.clear();
-    lcd.setCursor(0,moznost);
-    lcd.print(">");
     if ((menu == 2)||(menu == 3)){
       if (moznost == 0)
-        moznost = 1; 
+        moznost = 1;
     }
+    if (menu == 8){
+      if (moznost == 0){
+        moznost = 3;
+        x = 13;
+      }
+      if (moznost == 1){
+        moznost = 3;
+        x = 0;
+      }
+      if (moznost == 2){
+        moznost = 3;
+        x = 13;
+      }
+        
+    }
+    lcd.clear();
+    lcd.setCursor(x,moznost);
+    lcd.print(">");
+     
+   
+    /*if (menu = 9){
+      if ((moznost == 1)||(moznost == 2)){
+        moznost = 3; 
+      }
+      if (moznost == 2){
+        moznost = 3;
+        x = 13;
+      }
+      else
+        x = 0;
+    }*/
   }
+
+  /*void SipkaUtok(){
+   * 
+    lcd.setCursor(x, moznost);
+    lcd.print(">");
+  }*/
 
   void Casomira() {
     lcd.clear();
     lcd.print("ID:  ");
-    //lcd.print(id);
-    lcd.print("cas  ");
-    lcd.print("datum");
-    lcd.setCursor(0,1);
     a = millis();
-    while (w==0){ 
+    while (UtokDokonceny==0){ 
+        //lcd.print(id);
+        lcd.setCursor(5,0);
+        lcd.print("cas  ");
+        lcd.setCursor(12,0);
+        lcd.print("datum");
+        lcd.setCursor(0,1);
+        
         c = millis();
         i = (c - a) / 1000;
         lcd.print(i);
@@ -303,35 +432,75 @@
         Serial.println(HC12.read());
         lcd.setCursor(16,1);
         lcd.print("    ");
-      if ((terc == 1)&&(levy == 0)){
+      if ((terc == 1)&&(levy == 0)&&(i>1)){
             lcd.setCursor(8,1);
             lcd.print("L: ");
             lcd.print(i);
+            L = i;
             levy = 1;
+            digitalWrite(ledL, HIGH);
           }
-      if ((terc == 2)&&(pravy == 0)){
-        lcd.setCursor(8,2);
-        lcd.print("P: ");
-        lcd.print(i);
-        pravy = 1;
-      }
+        if ((terc == 2)&&(pravy == 0)&&(i>1)){
+          lcd.setCursor(8,2);
+          lcd.print("P: ");
+          P = i;
+          lcd.print(i);
+          pravy = 1;
+          digitalWrite(ledP, HIGH);
+        }
       lcd.setCursor(16,1);
       lcd.print("    ");
       lcd.setCursor(16,2);
       lcd.print("    ");
        
-      if (((levy == 1)&&(pravy == 1))||(i >= 60)){
+      if (((levy == 1)&&(pravy == 1))||(i >= 10.99)){
         levy = 0;
         pravy = 0;
-        w=1;
-        lcd.setCursor(0,3);
-        lcd.print(">Zpet         Smazat");
-        //delay(1500);
+        UtokDokonceny=1;
+        //cas_utoku = cas
+        //datum_utoku = datum
       }
-   }
-    //lcd.print(pravy);
-    
-    
+    } 
+  }
+
+  void Automaticky(){
+    lcd.clear();
+    lcd.setCursor(0,1);
+    lcd.print("Zavodnici na mista");
+    delay(1000);
+    lcd.setCursor(0,1);
+    lcd.clear();
+    lcd.setCursor(0,1);
+    lcd.print("Pripravte se");
+    for (int i = 0; i < 3; i++){
+      lcd.print(" .");
+      delay(1000);
+    }
+    lcd.clear();
+    lcd.setCursor(0,1);
+    lcd.print("Pozor!");
+    delay(random(2000,4000));
+  }
+
+  void VypisMenu(){
+    lcd.setCursor(19,0);
+    lcd.print(menu);
+    lcd.setCursor(19,1);
+    lcd.print(UtokDokonceny);
+    lcd.setCursor(19,2);
+    lcd.print(moznost);
+   
+  }
+
+  void UtokSmazan(){
+    lcd.clear();
+    lcd.setCursor(2,1);
+    lcd.print("Utok ID:  ");
+    //lcd.print(id);
+    lcd.print("byl");
+    lcd.setCursor(1,2);
+    lcd.print("uspesne smazan");
+    delay(2000);
   }
 
   
