@@ -1,3 +1,10 @@
+  /*
+   *        Priprava zakladny -> minuty++ z menu 1
+   *        hw preruseni u odpoctu?
+   *        indikace uspesne komunikace
+   * 
+   * 
+  */
   #include <SoftwareSerial.h>
   #include <LiquidCrystal_I2C.h>
   #include <Wire.h>
@@ -5,10 +12,14 @@
 
   SoftwareSerial HC12(10, 11);
 
-  int levy = 0,pravy = 0,UtokDokonceny = 0,terc = 0, x=0;
+  int levy = 0,pravy = 0,UtokDokonceny = 0,terc = 0, x=0, manualne = 0;
+  
+  int minuty = 5;
+  int sekundy = 0;
+  
   const int ledP = 6;
   const int ledL = 5;
-
+  //bool
   double L = 0, P = 0;
   
   double i = 0;
@@ -25,7 +36,7 @@
   
   int menu = 1;
   int moznost = 0;
-
+  
   /*1-hlavni, 
    * 2-utok, 6-auto, 7-manualne, 8-casomira
    * 3-priprava, 9-odpocet
@@ -88,13 +99,28 @@
     for (int i = 0; i < pocetTlacitek; i++) {
       if (inputFlags[i] == HIGH) {
         if (i == 0) {
-           if (menu == 6){
+           if (menu == 6){ //CASOMIRA
               if (moznost == 2) {
                 menu = 8;
                 moznost = 3;
               }
             }
-           
+           if (menu == 7){
+            if (moznost == 2){ // CASOMIRA
+                menu = 8;
+                moznost = 3;
+                manualne = 1;
+              }
+           }
+           if (menu == 2){ //Pozarni utok
+              //while (HC12.available()) {
+              
+                if (moznost == 1){ //Automaticky
+                  menu = 6;
+                  moznost = 2;
+                }
+            
+          }
            if ((menu == 1)&&(millis() > 5000)){
               if (moznost == 1){
                 menu = 3;
@@ -102,7 +128,7 @@
               }
               if (moznost == 0){
                 menu = 2;
-                //moznost = 1;
+                moznost = 1;
               }
               if (moznost == 2){
                 menu = 4;
@@ -121,27 +147,42 @@
                   menu = 1;
                   moznost = 0;
                 }
-                if (moznost == 1){ //Automaticky
-                  menu = 6;
-                  moznost = 2;
-                }
+             
                 if (moznost == 2){ //Manualne
+                  menu = 7;
+                  moznost = 2;
               }
-                
-                
-              //}
-
-            
+          }
+          if (menu == 3){
+            if (moznost == 2){
+              Odpocet();
+            }
           }
          
-          if (menu == 6){
+          if (menu == 6){ //AUTOMATICKY
            
               if (moznost == 3){ // ZPET
                 menu = 2;
                 moznost = 1;
               }
             }
+          if (menu == 7){ //MANUALNE
+           
+              if (moznost == 3){ // ZPET
+                menu = 2;
+                moznost = 2;
+              }
+            }
           if (menu == 3){
+            
+            if (moznost == 1){
+              if (minuty == 6){
+                minuty = 1;
+              }
+              else {
+                minuty++;
+              }
+            }
             if (moznost == 3){
               menu = 1;
               moznost = 1;
@@ -178,25 +219,52 @@
           
           if ((menu == 8)&&(UtokDokonceny==1)){
             if ((moznost == 3)&&(x == 0)){
-              menu = 6;
+              if (manualne == 0){
+                menu = 6;
+              }
+              else {
+                menu = 7;
+              }
               moznost = 3;
             }
           }    
           if (menu == 9){
             if (x == 11){
-              menu = 8; 
+              if (manualne == 0){
+                menu = 8; 
+              }
+              else 
+              {
+                menu = 7;
+              }
               moznost = 3;
               x = 0;
             }
           }    
           
         }
-        if (i == 1){
-          if ((menu != 9)&&(menu!=8)){
+        if (i == 1){                       //UP                    ////////////////////////////////////////////////////
+          if (menu == 1){ //4 moznosti
             if (moznost == 0){
             moznost = 3;}
           else {
             moznost--;}
+          }
+          if ((menu == 2)||(menu == 3)){      //3 Moznosti 
+            if (moznost == 1){
+              moznost = 3;
+            }
+            else {
+              moznost--;
+            }
+          }
+          if ((menu == 6)||(menu == 7)){      //2 Moznosti 
+            if (moznost == 2){
+              moznost = 3;
+            }
+            else {
+              moznost--;
+            }
           }
           
           if (menu == 8){
@@ -208,12 +276,28 @@
               x = 4;}
           }
         }
-        if (i == 2){
-          if ((menu != 9)&&(menu!=8)){
+        if (i == 2){                         //DOWN            ///////////////////////////////
+          if (menu == 1){ //4 moznosti
             if (moznost == 3){
               moznost = 0;}
             else {
               moznost++;}
+          }
+          if ((menu == 2)||(menu == 3)){              //3 moznosti
+            if (moznost == 3){
+              moznost = 1;
+            }
+            else {
+              moznost++;
+            }
+          }
+          if ((menu == 6)||(menu == 7)){              //2 moznosti
+            if (moznost == 3){
+              moznost = 2;
+            }
+            else {
+              moznost++;
+            }
           }
           if (menu == 8){
             if (x == 0){
@@ -253,7 +337,7 @@
         {
           //while(HC12.available()){
             lcd.setCursor(0,0);
-            lcd.print(" == Pozarni utok == ");
+            lcd.print("Pozarni utok");
             lcd.setCursor(1,1);
             lcd.print("Automaticky");
             lcd.setCursor(1,2);
@@ -273,11 +357,19 @@
         {
          
           lcd.setCursor(0,0);
-          lcd.print(" Priprava zakladny  ");
+          lcd.print("Priprava zakladny");
           lcd.setCursor(1,1);
-          lcd.print("X");
+          lcd.print(minuty);
           lcd.setCursor(3,1);
-          lcd.print("minut");
+          if ((minuty == 5)||(minuty == 6)){
+            lcd.print("minut");
+          }
+          else if (minuty == 1){
+            lcd.print("minuta");
+          }
+          else {
+            lcd.print("minuty");
+          }
           lcd.setCursor(1,2);
           lcd.print("Zahajit odpocet");
           lcd.setCursor(1,3);
@@ -307,7 +399,7 @@
          
           UtokDokonceny = 0;
           lcd.setCursor(0,0);
-          lcd.print(" == Automaticky ==  ");
+          lcd.print("Automaticky");
           lcd.setCursor(1,2);
           lcd.print("Spustit");
           lcd.setCursor(1,3);
@@ -317,8 +409,9 @@
       case 7: //Manualne
         {
          
+          manualne = 0;
           lcd.setCursor(0,0);
-          lcd.print("   == Manualne ==   ");
+          lcd.print("Manualne");
           lcd.setCursor(1,2);
           lcd.print("Spustit casomiru");
           lcd.setCursor(1,3);
@@ -328,8 +421,9 @@
       case 8: //Automaticky odpocet
         {
           if (UtokDokonceny != 1){
-            
-            Automaticky();
+            if (manualne != 1){
+              Automaticky();
+            }
             Casomira();
             lcd.setCursor(0,3);
             lcd.print(">");
@@ -369,48 +463,14 @@
 
   void Sipka()
   {
-    if ((menu == 2)||(menu == 3)){
+    /*if ((menu == 2)||(menu == 3)){
       if (moznost == 0)
         moznost = 1;
-    }
-    if (menu == 8){
-      if (moznost == 0){
-        moznost = 3;
-        x = 13;
-      }
-      if (moznost == 1){
-        moznost = 3;
-        x = 0;
-      }
-      if (moznost == 2){
-        moznost = 3;
-        x = 13;
-      }
-        
-    }
+    }*/
     lcd.clear();
     lcd.setCursor(x,moznost);
     lcd.print(">");
-     
-   
-    /*if (menu = 9){
-      if ((moznost == 1)||(moznost == 2)){
-        moznost = 3; 
-      }
-      if (moznost == 2){
-        moznost = 3;
-        x = 13;
-      }
-      else
-        x = 0;
-    }*/
   }
-
-  /*void SipkaUtok(){
-   * 
-    lcd.setCursor(x, moznost);
-    lcd.print(">");
-  }*/
 
   void Casomira() {
     lcd.clear();
@@ -501,6 +561,30 @@
     lcd.setCursor(1,2);
     lcd.print("uspesne smazan");
     delay(2000);
+  }
+
+  void Odpocet(){
+    lcd.clear();
+    lcd.setCursor(0,3);
+    lcd.print(">Zpet");
+    do {
+      lcd.setCursor(1,1);
+      lcd.print(minuty);
+      lcd.print(":");
+      if (sekundy <= 9)
+      {
+        lcd.print("0");
+      }
+      lcd.print(sekundy);
+      if (sekundy == 0 && minuty >= 1) {
+        sekundy = 60;
+        minuty--;
+      }
+      delay(1000);
+      sekundy--;   
+    } while ((minuty != 0)||(sekundy != 0));
+    //bzucak
+    minuty = 5;
   }
 
   
