@@ -17,7 +17,7 @@
 
   bool levy = false,pravy = false;
   bool UtokDokonceny = false, manualne = false;
-  byte terc = 0, x=0;
+  byte terc = 0, x=0, predchoziMenu;
   bool ahoj = false;
   byte priprava = 5;
   byte minuty = 0;
@@ -26,8 +26,7 @@
   //SD KARTA
   File myFile;
   SdFat SD;
-  byte ID = 1;;
-  const byte chipSelect = 10;
+  byte ID = 1;
   /////////
   unsigned long pomocna = 0;
   
@@ -46,7 +45,37 @@
   
   byte menu = 1;
   byte moznost = 0;
-  
+
+  byte sipkaVpravo[] = {
+    B00000,
+    B00100,
+    B00010,
+    B11111,
+    B00010,
+    B00100,
+    B00000,
+    B00000
+  };
+  byte sipkaVlevo[] = {
+    B00000,
+    B00100,
+    B01000,
+    B11111,
+    B01000,
+    B00100,
+    B00000,
+    B00000
+  };
+  byte baterie[] = {
+    B01110,
+    B11011,
+    B10001,
+    B10001,
+    B11111,
+    B11111,
+    B11111,
+    B11111
+  };
   /*1-hlavni, 
    * 2-utok, 6-auto, 7-manualne, 8-casomira
    * 3-priprava, 9-odpocet
@@ -62,9 +91,11 @@
     lcd.begin(20, 4);
     lcd.clear();
     lcd.backlight();
+    lcd.createChar(0, sipkaVlevo);
+    lcd.createChar(1, sipkaVpravo);
+    lcd.createChar(2, baterie);
     
-    
-    if (!SD.begin(chipSelect)){
+    if (!SD.begin(10)){
       lcd.print("Chybi SD karta");
       delay(1000);
       return;
@@ -80,9 +111,11 @@
     lcd.print("Casomira");
     lcd.setCursor(0,3);
     lcd.print("V1.0");
+    //lcd.setCursor(13,3);
+    //lcd.print("By Marw");
     delay(3000);
     lcd.clear();
-    while (SD.exists(String(ID))){
+    while (SD.exists(String(ID + 1))){
       ID++;
     }
   }
@@ -199,7 +232,10 @@
                     }
                   } break;
                   case 13: {
-                    //SMAZAT
+                    predchoziMenu = menu;
+                    menu = 9; // Smazat
+                    moznost = 2;
+                    x = 4;
                     }
                   } break;  
                 }
@@ -257,6 +293,7 @@
                       moznost = 3;
                     } break;
                     case 13: {
+                      predchoziMenu = menu;
                       menu = 9; // Smazat
                       moznost = 2;
                       x = 4;
@@ -270,12 +307,19 @@
                 switch (x) {
                   case 4: {
                     UtokSmazan();
-                    menu = 2;
-                    moznost = 3;
+                    if (predchoziMenu == 4){
+                      menu = predchoziMenu;
+                      moznost = 3;
+                      
+                    }
+                    else if (predchoziMenu == 8){
+                      menu = 2;
+                      moznost = 3;
+                    }
                     x = 0;
                   } break;
                   case 11: {
-                    menu = 8;
+                    menu = predchoziMenu;
                     moznost = 3;
                     x = 0;
                   } break;
@@ -456,50 +500,24 @@
           lcd.setCursor(0,0);
           lcd.print("ID:");
           lcd.print(ID);
-          lcd.setCursor(5,0);
-          lcd.print("cas  ");
-          lcd.setCursor(12,0);
+          lcd.print(" cas ");
           lcd.print("datum");
           lcd.setCursor(0,1);
-          myFile = SD.open(String(ID) + "/Vysledny.txt");
-          if (myFile) {
-            for (byte data = 0; data < 5; data++){
-              lcd.write(myFile.read());
-            }
-            myFile.close();
-          } else {
-            Serial.println("error opening Vys.txt");
-          }
+          CtiSD('V');
           lcd.setCursor(7,1);
           lcd.print("L:");
-          myFile = SD.open(String(ID) + "/L.txt");
-          if (myFile) {
-            for (byte data = 0; data < 5; data++){
-              lcd.write(myFile.read());
-            }
-            myFile.close();
-          } else {
-            Serial.println("error opening L.txt");
-          }
+          CtiSD('L');
           lcd.setCursor(7,2);
           lcd.print("P:");
-          myFile = SD.open(String(ID) + "/P.txt");
-          if (myFile) {
-            for (byte data = 0; data < 5; data++){
-              lcd.write(myFile.read());
-            }
-            myFile.close();
-          } else {
-            Serial.println("error opening P.txt");
-          }//*
+          CtiSD('P');
           lcd.setCursor(1,3);
           lcd.print("Zpet");
           lcd.setCursor(14,3);
           lcd.print("Smazat");
           lcd.setCursor(7,3);
-          lcd.print("<");
+          lcd.write(byte(0));
           lcd.setCursor(11,3);
-          lcd.print(">");
+          lcd.write(byte(1));
         }
         break;
       case 5: //Nejrychlejsi sestriky
@@ -542,15 +560,15 @@
             if (manualne != true){
               Automaticky();
             }
-            /*while (SD.exists(String(ID))){
+            while (SD.exists(String(ID))){
                 ID++;
-            }*/
+            }
             Casomira();
             lcd.setCursor(0,3);
             lcd.print(">");
             
           }
-         
+          SD.mkdir(String(ID));
           lcd.setCursor(0,0);
           lcd.print("ID:");
           lcd.print(ID);
@@ -558,39 +576,19 @@
           lcd.print("datum");
           lcd.setCursor(0,1);
           lcd.print(i);
+          ZapisSD('V', i);
           lcd.setCursor(8,1);
           lcd.print(L);
+          ZapisSD('L', L);
           lcd.setCursor(8,2);
           lcd.print(P);
+          ZapisSD('P', P);
           lcd.setCursor(1,3);
           lcd.print("Zpet");
           lcd.setCursor(14,3);
           lcd.print("Smazat");
-          /*SD.mkdir(ID);
-          myFile = SD.open(String(ID) + "/L.txt", FILE_WRITE);
-          if (myFile) {
-            myFile.println(L);
-            myFile.close();
-            Serial.println("L done.");
-          } else {
-            Serial.println("error opening L test.txt");
-          }
-          myFile = SD.open(String(ID) + "/P.txt", FILE_WRITE);
-          if (myFile) {
-            myFile.println(P);
-            myFile.close();
-            Serial.println("P done.");
-          } else {
-            Serial.println("error opening P test.txt");
-          }
-          myFile = SD.open(String(ID) + "/Vysledny.txt", FILE_WRITE);
-          if (myFile) {
-            myFile.print(i);
-            myFile.close();
-            Serial.println("Vys done.");
-          } else {
-            Serial.println("error opening Vys test.txt");
-          }*/
+          
+          
         }
         break;
       case 9: //Smazat
@@ -675,7 +673,6 @@
     lcd.setCursor(0,1);
     lcd.print("Zavodnici na mista");
     delay(1000);
-    lcd.setCursor(0,1);
     lcd.clear();
     lcd.setCursor(0,1);
     lcd.print("Pripravte se");
@@ -687,11 +684,12 @@
     lcd.setCursor(0,1);
     lcd.print("Pozor!");
     delay(random(2000,4000));
+    //bzucak;
   }
 
   void VypisMenu(){
     lcd.setCursor(19,0);
-    lcd.print(menu);
+    lcd.write(byte(2));
     lcd.setCursor(19,1);
     lcd.print(ID);
     lcd.setCursor(19,2);
@@ -707,10 +705,13 @@
     lcd.setCursor(2,1);
     lcd.print("Utok ID:");
     lcd.print(ID);
-    /*if (ID != 1){
-      SD.rmdir(ID);
+    if (ID != 1){
+      SD.remove(String(ID) + "/V.txt");
+      SD.remove(String(ID) + "/L.txt");
+      SD.remove(String(ID) + "/P.txt");
+      SD.rmdir(String(ID));
       ID--;
-    }*/
+    }
     lcd.print(" byl");
     lcd.setCursor(2,2);
     lcd.print("uspesne smazan");
@@ -747,15 +748,25 @@
        
     } while ((minuty != 0)||(sekundy != 0));
   }
-
-  /*char CtiSDkartu(char Zapis){
-    myFile = SD.open(String(ID) + "/" + Zapis + ".txt");
+  
+  void CtiSD(char Zapis){
+    myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt");
     if (myFile) {
       for (byte data = 0; data < 5; data++){
         lcd.write(myFile.read());
       }
       myFile.close();
     } else {
-      Serial.println("error opening  " + Zapis + ".txt");
+      Serial.println("error opening  " + String(Zapis) + ".txt");
     }
-  }*/
+  }
+  void ZapisSD(char Zapis, double Terc){
+    myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt", FILE_WRITE);
+      if (myFile) {
+        myFile.print(Terc);
+        myFile.close();
+        Serial.println("Vys done.");
+      } else {
+        Serial.println("error writing to " + String(Zapis) + ".txt");
+      }
+  }
