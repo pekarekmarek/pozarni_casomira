@@ -2,40 +2,50 @@
    *        Priprava zakladny -> minuty++ z menu 1
    *        hw preruseni u odpoctu?
    *        indikace uspesne komunikace
-   * 
+   *        automaticke mazani pokud cas > 60s
+   *        Pozarni utok 2 moznost 0
    * 
   */
   #include <SoftwareSerial.h>
   #include <LiquidCrystal_I2C.h>
-  #include <Wire.h>
+  #include <SPI.h>
+  #include "SdFat.h"
+  
   LiquidCrystal_I2C lcd(0x27, 20, 4);
 
-  SoftwareSerial HC12(10, 11);
+  SoftwareSerial HC12(8, 9);
 
-  int levy = 0,pravy = 0,UtokDokonceny = 0,terc = 0, x=0, manualne = 0;
+  bool levy = false,pravy = false;
+  bool UtokDokonceny = false, manualne = false;
+  byte terc = 0, x=0;
+  bool ahoj = false;
+  byte priprava = 5;
+  byte minuty = 0;
+  byte sekundy = 0;
+
+  //SD KARTA
+  File myFile;
+  SdFat SD;
+  byte ID = 1;;
+  const byte chipSelect = 10;
+  /////////
+  unsigned long pomocna = 0;
   
-  int minuty = 5;
-  int sekundy = 0;
-  
-  const int ledP = 6;
-  const int ledL = 5;
-  //bool
   double L = 0, P = 0;
   
   double i = 0;
   double a = millis();
   double c;
   
-  const int pocetTlacitek = 3;
-  const int pinyTlacitek[pocetTlacitek] = {2, 3, 4};
-  int nove[pocetTlacitek];
-  int stare[pocetTlacitek] = {LOW, LOW, LOW};
-  bool inputFlags[pocetTlacitek] = {LOW, LOW, LOW};
-  long debounce[pocetTlacitek] = {0, 0, 0};
-  long Delay = 5;
+  const byte pinyTlacitek[3] = {2, 3, 4};
+  byte nove[3];
+  byte stare[3] = {LOW, LOW, LOW};
+  bool inputFlags[3] = {LOW, LOW, LOW};
+  long debounce[3] = {0, 0, 0};
+  byte Delay = 5;
   
-  int menu = 1;
-  int moznost = 0;
+  byte menu = 1;
+  byte moznost = 0;
   
   /*1-hlavni, 
    * 2-utok, 6-auto, 7-manualne, 8-casomira
@@ -52,37 +62,37 @@
     lcd.begin(20, 4);
     lcd.clear();
     lcd.backlight();
-
-    pinMode(ledP, OUTPUT);
-    pinMode(ledL, OUTPUT);
-
-    digitalWrite(ledP, LOW);
-    digitalWrite(ledL, LOW);
     
-    for (int i = 0; i < pocetTlacitek; i++) {
+    
+    if (!SD.begin(chipSelect)){
+      lcd.print("Chybi SD karta");
+      delay(1000);
+      return;
+    }    
+    for (byte i = 0; i < 3; i++) {
       pinMode(pinyTlacitek[i], INPUT);
       digitalWrite(pinyTlacitek[i], HIGH); // pull-up 
     }
+    lcd.clear();
     lcd.setCursor(1,1);
     lcd.print("Bezdratova Pozarni");
     lcd.setCursor(5,2);
     lcd.print("Casomira");
     lcd.setCursor(0,3);
     lcd.print("V1.0");
-    lcd.setCursor(13,3);
-    lcd.print("By Marw");
     delay(3000);
     lcd.clear();
+    while (SD.exists(String(ID))){
+      ID++;
+    }
   }
  
 
   void loop() {
-   /* if ((menu == 8)&&(UtokDokonceny==1)){
-      menu = 9;
-    }    */
+   
     VypisMenu();
-    for (int i = 0; i < pocetTlacitek; i++){
-      int reading = digitalRead(pinyTlacitek[i]);
+    for (byte i = 0; i < 3; i++){
+      byte reading = digitalRead(pinyTlacitek[i]);
       if (reading != stare[i]) {
         debounce[i] = millis();
       }
@@ -96,219 +106,282 @@
       }
       stare[i] = reading;
     }
-    for (int i = 0; i < pocetTlacitek; i++) {
+    for (byte i = 0; i < 3; i++) {
       if (inputFlags[i] == HIGH) {
-        if (i == 0) {
-           if (menu == 6){ //CASOMIRA
-              if (moznost == 2) {
-                menu = 8;
-                moznost = 3;
+        if (i == 0){                //SELECT
+          switch (menu)
+          {
+            case 1: // Hlavni menu
+              {
+                if (millis() > 5000){
+                  switch (moznost) {
+                    case 0: {
+                      menu = 2;
+                      moznost = 1;
+                    } break;
+                    case 1: {
+                      menu = 3;
+                      moznost = 1;
+                    } break;
+                    case 2: {
+                      menu = 4;
+                      moznost = 3;
+                    } break;
+                    case 3: {
+                      menu = 5;
+                      moznost = 1;
+                    } break; 
+                  }
+                }   
               }
-            }
-           if (menu == 7){
-            if (moznost == 2){ // CASOMIRA
-                menu = 8;
-                moznost = 3;
-                manualne = 1;
-              }
-           }
-           if (menu == 2){ //Pozarni utok
-              //while (HC12.available()) {
-              
-                if (moznost == 1){ //Automaticky
-                  menu = 6;
-                  moznost = 2;
+              break;
+            case 2: // Pozarni utok
+              {
+                switch (moznost) {
+                  case 1: {
+                    menu = 6;
+                    moznost = 2;
+                  } break;
+                  case 2: {
+                    menu = 7;
+                    moznost = 2;
+                  } break;
+                  case 3: {
+                    menu = 1;
+                    moznost = 0;
+                  } break; 
                 }
-            
-          }
-           if ((menu == 1)&&(millis() > 5000)){
-              if (moznost == 1){
-                menu = 3;
-                //moznost = 1;
               }
-              if (moznost == 0){
-                menu = 2;
-                moznost = 1;
+              break;
+            case 3: // Odpocet pripravy
+              {
+                switch (moznost) {
+                  case 1: {
+                    if (priprava == 6){
+                      priprava = 1;
+                    }
+                    else {
+                      priprava++;
+                    }
+                  } break;
+                  case 2: {
+                    while ((digitalRead(2) == HIGH)&&(ahoj == false)){
+                      Odpocet();
+                    }
+                    ahoj = true;
+                    minuty = priprava;
+                    sekundy = 0;
+                    menu = 1;
+                    moznost = 0;
+                  } break;
+                  case 3: {
+                    menu = 1;
+                    moznost = 1;
+                  } break; 
+                }
               }
-              if (moznost == 2){
-                menu = 4;
-                moznost = 1;
+              break;
+            case 4: // Historie
+              {
+                switch (x) {
+                  case 0: {
+                    menu = 1;
+                    moznost = 2;
+                  } break;
+                  case 6: {
+                    if (ID != 1){
+                      ID--;
+                    }
+                  } break;
+                  case 10: {
+                    if (SD.exists(String(ID + 1))){
+                      ID++;
+                    }
+                  } break;
+                  case 13: {
+                    //SMAZAT
+                    }
+                  } break;  
+                }
+              break;
+            case 5: // Nejrychlejsi casy
+              {
+                switch (moznost) {
+                  case 3: {
+                    menu = 1;
+                    moznost = 3;
+                  } break; 
+                }
               }
-              if (moznost == 3){
-                menu = 5;
-                moznost = 1;
+              break;
+            case 6: // Automaticky
+              {
+                switch (moznost) {
+                  case 2: {
+                    menu = 8;
+                    moznost = 3;
+                  } break;
+                  case 3: {
+                    menu = 2;
+                    moznost = 1;
+                  } break; 
+                }
               }
-                
+              break;
+            case 7: // Manualne
+              {
+                switch (moznost) {
+                  case 2: {
+                    menu = 8;
+                    moznost = 3;
+                    manualne = 1;
+                  } break;
+                  case 3: {
+                    menu = 2;
+                    moznost = 2;
+                  } break; 
+                }
+              }
+              break;
+            case 8: // Casomira
+              {
+                if (UtokDokonceny == true){
+                  switch (x) {
+                    case 0: {
+                      if (manualne == 0){ 
+                        menu = 6;  
+                      }
+                      else { 
+                        menu = 7;
+                      }
+                      moznost = 3;
+                    } break;
+                    case 13: {
+                      menu = 9; // Smazat
+                      moznost = 2;
+                      x = 4;
+                    } break;
+                  } 
+                }
+              }
+              break;
+            case 9: // Smazat
+              {
+                switch (x) {
+                  case 4: {
+                    UtokSmazan();
+                    menu = 2;
+                    moznost = 3;
+                    x = 0;
+                  } break;
+                  case 11: {
+                    menu = 8;
+                    moznost = 3;
+                    x = 0;
+                  } break;
+                }
+              }
+              break;
             }
-            
-            if (menu == 2){ //Pozarni utok
-              //while (HC12.available()) {
-                if (moznost == 3){ //Zpet
-                  menu = 1;
+          }
+          if (i == 1){                //UP
+            switch (menu){
+              case 1: {  // 4 Moznosti
+                if (moznost == 0){
+                  moznost = 3;
+                }
+                else {
+                  moznost--;
+                }
+              } break;
+             case 2: // 3 Moznosti
+             case 3: {
+                if (moznost == 1){
+                  moznost = 3;
+                }
+                else {
+                  moznost--;
+                }
+              } break;
+             case 4: {
+                if (x == 0){
+                  x = 13;}
+                else if (x == 6){
+                  x = 0;}
+                else if (x == 10){
+                  x = 6;}
+                else if (x == 13){
+                  x = 10;}
+              } break;
+             case 5: {
+                //Nejrychlejsi sestriky
+              } break;
+             case 6:
+             case 7: {
+                if (moznost  == 2){
+                  moznost = 3;}
+                else {
+                  moznost--; }
+              } break;
+             case 8: {
+                if (x == 13){
+                  x = 0; }
+              } break;
+             case 9: {
+                if (x == 11){
+                  x = 4; }
+              } break;
+            }
+          }
+          if (i == 2){            //DOWN
+            switch (menu){
+              case 1: {  // 4 Moznosti
+                if (moznost == 3){
                   moznost = 0;
                 }
-             
-                if (moznost == 2){ //Manualne
-                  menu = 7;
-                  moznost = 2;
-              }
-          }
-          if (menu == 3){
-            if (moznost == 2){
-              Odpocet();
+                else {
+                  moznost++;
+                }
+              } break;
+             case 2: // 3 Moznosti
+             case 3: {
+                if (moznost == 3){
+                  moznost = 1;
+                }
+                else {
+                  moznost++;
+                }
+              } break;
+             case 4: {
+                if (x == 13){
+                  x = 0;}
+                else if (x == 10){
+                  x = 13;}
+                else if (x == 6){
+                  x = 10;}
+                else if (x == 0){
+                  x = 6;}
+              } break;
+             case 5: {
+                //Nejrychlejsi sestriky
+              } break;
+             case 6:
+             case 7: {
+                if (moznost  == 3){
+                  moznost = 2;}
+                else {
+                  moznost++; }
+              } break;
+             case 8: {
+                if (x == 0){
+                  x = 13; }
+              } break;
+             case 9: {
+                if (x == 4){
+                  x = 11; }
+              } break;
             }
           }
-         
-          if (menu == 6){ //AUTOMATICKY
-           
-              if (moznost == 3){ // ZPET
-                menu = 2;
-                moznost = 1;
-              }
-            }
-          if (menu == 7){ //MANUALNE
-           
-              if (moznost == 3){ // ZPET
-                menu = 2;
-                moznost = 2;
-              }
-            }
-          if (menu == 3){
-            
-            if (moznost == 1){
-              if (minuty == 6){
-                minuty = 1;
-              }
-              else {
-                minuty++;
-              }
-            }
-            if (moznost == 3){
-              menu = 1;
-              moznost = 1;
-            }
-          }
-          if (menu == 4){
-            if (moznost == 3){
-              menu = 1;
-              moznost = 2;
-            }
-          }
-          if (menu == 5){
-            if (moznost == 3){
-              menu = 1;
-              moznost = 3;
-            }
-          }
-          if (menu == 9){  
-            if (x == 4){
-              UtokSmazan(); 
-              menu = 6;
-              moznost = 3;
-              x = 0;
-            }
-          }
-          
-          if ((menu == 8)&&(UtokDokonceny==1)){
-            if ((moznost == 3)&&(x == 13)){
-              menu = 9; //SMAZAT
-              moznost = 2;
-              x = 4;
-            }
-          }
-          
-          if ((menu == 8)&&(UtokDokonceny==1)){
-            if ((moznost == 3)&&(x == 0)){
-              if (manualne == 0){
-                menu = 6;
-              }
-              else {
-                menu = 7;
-              }
-              moznost = 3;
-            }
-          }    
-          if (menu == 9){
-            if (x == 11){
-              if (manualne == 0){
-                menu = 8; 
-              }
-              else 
-              {
-                menu = 7;
-              }
-              moznost = 3;
-              x = 0;
-            }
-          }    
-          
-        }
-        if (i == 1){                       //UP                    ////////////////////////////////////////////////////
-          if (menu == 1){ //4 moznosti
-            if (moznost == 0){
-            moznost = 3;}
-          else {
-            moznost--;}
-          }
-          if ((menu == 2)||(menu == 3)){      //3 Moznosti 
-            if (moznost == 1){
-              moznost = 3;
-            }
-            else {
-              moznost--;
-            }
-          }
-          if ((menu == 6)||(menu == 7)){      //2 Moznosti 
-            if (moznost == 2){
-              moznost = 3;
-            }
-            else {
-              moznost--;
-            }
-          }
-          
-          if (menu == 8){
-            if (x == 13){
-              x = 0;}
-          }
-          if (menu == 9){
-            if (x == 11){
-              x = 4;}
-          }
-        }
-        if (i == 2){                         //DOWN            ///////////////////////////////
-          if (menu == 1){ //4 moznosti
-            if (moznost == 3){
-              moznost = 0;}
-            else {
-              moznost++;}
-          }
-          if ((menu == 2)||(menu == 3)){              //3 moznosti
-            if (moznost == 3){
-              moznost = 1;
-            }
-            else {
-              moznost++;
-            }
-          }
-          if ((menu == 6)||(menu == 7)){              //2 moznosti
-            if (moznost == 3){
-              moznost = 2;
-            }
-            else {
-              moznost++;
-            }
-          }
-          if (menu == 8){
-            if (x == 0){
-              x = 13;}
-          }
-          if (menu == 9){
-            if (x == 4){
-              x = 11;}
-          }
-        }
-        //inputAction(i);
         inputFlags[i] = LOW;
         Sipka(); 
         Menu();
@@ -344,6 +417,7 @@
             lcd.print("Manualne");
             lcd.setCursor(1,3);
             lcd.print("Zpet");
+            ahoj = false;
           //}
           //lcd.clear();
           //lcd.setCursor(1,1);
@@ -359,12 +433,12 @@
           lcd.setCursor(0,0);
           lcd.print("Priprava zakladny");
           lcd.setCursor(1,1);
-          lcd.print(minuty);
+          lcd.print(priprava);
           lcd.setCursor(3,1);
-          if ((minuty == 5)||(minuty == 6)){
+          if ((priprava == 5)||(priprava == 6)){
             lcd.print("minut");
           }
-          else if (minuty == 1){
+          else if (priprava == 1){
             lcd.print("minuta");
           }
           else {
@@ -380,16 +454,59 @@
         {
          
           lcd.setCursor(0,0);
-          lcd.print("Historie ");
+          lcd.print("ID:");
+          lcd.print(ID);
+          lcd.setCursor(5,0);
+          lcd.print("cas  ");
+          lcd.setCursor(12,0);
+          lcd.print("datum");
+          lcd.setCursor(0,1);
+          myFile = SD.open(String(ID) + "/Vysledny.txt");
+          if (myFile) {
+            for (byte data = 0; data < 5; data++){
+              lcd.write(myFile.read());
+            }
+            myFile.close();
+          } else {
+            Serial.println("error opening Vys.txt");
+          }
+          lcd.setCursor(7,1);
+          lcd.print("L:");
+          myFile = SD.open(String(ID) + "/L.txt");
+          if (myFile) {
+            for (byte data = 0; data < 5; data++){
+              lcd.write(myFile.read());
+            }
+            myFile.close();
+          } else {
+            Serial.println("error opening L.txt");
+          }
+          lcd.setCursor(7,2);
+          lcd.print("P:");
+          myFile = SD.open(String(ID) + "/P.txt");
+          if (myFile) {
+            for (byte data = 0; data < 5; data++){
+              lcd.write(myFile.read());
+            }
+            myFile.close();
+          } else {
+            Serial.println("error opening P.txt");
+          }//*
           lcd.setCursor(1,3);
           lcd.print("Zpet");
+          lcd.setCursor(14,3);
+          lcd.print("Smazat");
+          lcd.setCursor(7,3);
+          lcd.print("<");
+          lcd.setCursor(11,3);
+          lcd.print(">");
         }
         break;
       case 5: //Nejrychlejsi sestriky
         {
          
           lcd.setCursor(0,0);
-          lcd.print(" Nejrychlejsi utoky");
+          lcd.print("Nejrychlejsi utoky");
           lcd.setCursor(1,3);
           lcd.print("Zpet");
         }
@@ -397,7 +514,7 @@
       case 6: //Automaticky
         {
          
-          UtokDokonceny = 0;
+          UtokDokonceny = false;
           lcd.setCursor(0,0);
           lcd.print("Automaticky");
           lcd.setCursor(1,2);
@@ -409,7 +526,8 @@
       case 7: //Manualne
         {
          
-          manualne = 0;
+          manualne = false;
+          UtokDokonceny = false;
           lcd.setCursor(0,0);
           lcd.print("Manualne");
           lcd.setCursor(1,2);
@@ -419,21 +537,24 @@
         }
         break;
       case 8: //Automaticky odpocet
-        {
-          if (UtokDokonceny != 1){
-            if (manualne != 1){
+        {  
+          if (UtokDokonceny != true){
+            if (manualne != true){
               Automaticky();
             }
+            /*while (SD.exists(String(ID))){
+                ID++;
+            }*/
             Casomira();
             lcd.setCursor(0,3);
             lcd.print(">");
             
           }
+         
           lcd.setCursor(0,0);
-          lcd.print("ID:  ");
-          lcd.setCursor(5,0);
-          lcd.print("cas  ");
-          lcd.setCursor(12,0);
+          lcd.print("ID:");
+          lcd.print(ID);
+          lcd.print(" cas ");
           lcd.print("datum");
           lcd.setCursor(0,1);
           lcd.print(i);
@@ -445,6 +566,31 @@
           lcd.print("Zpet");
           lcd.setCursor(14,3);
           lcd.print("Smazat");
+          /*SD.mkdir(ID);
+          myFile = SD.open(String(ID) + "/L.txt", FILE_WRITE);
+          if (myFile) {
+            myFile.println(L);
+            myFile.close();
+            Serial.println("L done.");
+          } else {
+            Serial.println("error opening L test.txt");
+          }
+          myFile = SD.open(String(ID) + "/P.txt", FILE_WRITE);
+          if (myFile) {
+            myFile.println(P);
+            myFile.close();
+            Serial.println("P done.");
+          } else {
+            Serial.println("error opening P test.txt");
+          }
+          myFile = SD.open(String(ID) + "/Vysledny.txt", FILE_WRITE);
+          if (myFile) {
+            myFile.print(i);
+            myFile.close();
+            Serial.println("Vys done.");
+          } else {
+            Serial.println("error opening Vys test.txt");
+          }*/
         }
         break;
       case 9: //Smazat
@@ -463,10 +609,6 @@
 
   void Sipka()
   {
-    /*if ((menu == 2)||(menu == 3)){
-      if (moznost == 0)
-        moznost = 1;
-    }*/
     lcd.clear();
     lcd.setCursor(x,moznost);
     lcd.print(">");
@@ -474,10 +616,11 @@
 
   void Casomira() {
     lcd.clear();
-    lcd.print("ID:  ");
+    lcd.print("ID:");
     a = millis();
+    lcd.print(ID);
     while (UtokDokonceny==0){ 
-        //lcd.print(id);
+        
         lcd.setCursor(5,0);
         lcd.print("cas  ");
         lcd.setCursor(12,0);
@@ -489,36 +632,40 @@
         lcd.print(i);
         lcd.setCursor(0,1);
         terc = HC12.read();
-        Serial.println(HC12.read());
+        //Serial.println(HC12.read());
         lcd.setCursor(16,1);
         lcd.print("    ");
-      if ((terc == 1)&&(levy == 0)&&(i>1)){
+        if ((terc == 1) && (levy == false) && (i > 1)){
             lcd.setCursor(8,1);
             lcd.print("L: ");
             lcd.print(i);
             L = i;
-            levy = 1;
-            digitalWrite(ledL, HIGH);
+            levy = true;
+            //digitalWrite(ledL, HIGH);
           }
-        if ((terc == 2)&&(pravy == 0)&&(i>1)){
+        if ((terc == 2) && (pravy == false) && (i > 1)){
           lcd.setCursor(8,2);
           lcd.print("P: ");
           P = i;
           lcd.print(i);
-          pravy = 1;
-          digitalWrite(ledP, HIGH);
+          pravy = true;
+          //digitalWrite(ledP, HIGH);
         }
       lcd.setCursor(16,1);
       lcd.print("    ");
       lcd.setCursor(16,2);
       lcd.print("    ");
        
-      if (((levy == 1)&&(pravy == 1))||(i >= 10.99)){
-        levy = 0;
-        pravy = 0;
-        UtokDokonceny=1;
-        //cas_utoku = cas
-        //datum_utoku = datum
+      if (((levy == true)&&(pravy == true))||(i >= 10.99)){
+        if (i >= 10.99){
+          L = i;
+          P = i;
+        }
+        levy = false;
+        pravy = false;
+        UtokDokonceny = true;
+        //cas_utoku = cas;
+        //datum_utoku = datum;
       }
     } 
   }
@@ -532,7 +679,7 @@
     lcd.clear();
     lcd.setCursor(0,1);
     lcd.print("Pripravte se");
-    for (int i = 0; i < 3; i++){
+    for (byte i = 0; i < 3; i++){
       lcd.print(" .");
       delay(1000);
     }
@@ -546,19 +693,26 @@
     lcd.setCursor(19,0);
     lcd.print(menu);
     lcd.setCursor(19,1);
-    lcd.print(UtokDokonceny);
+    lcd.print(ID);
     lcd.setCursor(19,2);
     lcd.print(moznost);
+    //lcd.setCursor(19,3);
+    //lcd.print(UtokDokonceny);
+  
    
   }
 
   void UtokSmazan(){
     lcd.clear();
     lcd.setCursor(2,1);
-    lcd.print("Utok ID:  ");
-    //lcd.print(id);
-    lcd.print("byl");
-    lcd.setCursor(1,2);
+    lcd.print("Utok ID:");
+    lcd.print(ID);
+    /*if (ID != 1){
+      SD.rmdir(ID);
+      ID--;
+    }*/
+    lcd.print(" byl");
+    lcd.setCursor(2,2);
     lcd.print("uspesne smazan");
     delay(2000);
   }
@@ -567,6 +721,7 @@
     lcd.clear();
     lcd.setCursor(0,3);
     lcd.print(">Zpet");
+    minuty = priprava;
     do {
       lcd.setCursor(1,1);
       lcd.print(minuty);
@@ -580,11 +735,27 @@
         sekundy = 60;
         minuty--;
       }
-      delay(1000);
-      sekundy--;   
+      unsigned long currentMillis = millis();
+      if (currentMillis - pomocna >= 1000) {
+        pomocna = currentMillis;
+        sekundy--;
+      }
+      
+      if(digitalRead(2) == LOW){
+        break;
+      }
+       
     } while ((minuty != 0)||(sekundy != 0));
-    //bzucak
-    minuty = 5;
   }
 
-  
+  /*char CtiSDkartu(char Zapis){
+    myFile = SD.open(String(ID) + "/" + Zapis + ".txt");
+    if (myFile) {
+      for (byte data = 0; data < 5; data++){
+        lcd.write(myFile.read());
+      }
+      myFile.close();
+    } else {
+      Serial.println("error opening  " + Zapis + ".txt");
+    }
+  }*/
