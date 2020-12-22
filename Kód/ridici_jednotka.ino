@@ -10,15 +10,16 @@
   #include <LiquidCrystal_I2C.h>
   #include <SPI.h>
   #include "SdFat.h"
+  #include "RTClib.h"
   
   LiquidCrystal_I2C lcd(0x27, 20, 4);
-
+  RTC_DS1307 rtc;
   SoftwareSerial HC12(8, 9);
 
   bool levy = false,pravy = false;
   bool UtokDokonceny = false, manualne = false;
   byte terc = 0, x=0, predchoziMenu;
-  bool ahoj = false;
+  String cas, datum;
   byte priprava = 5;
   byte minuty = 0;
   byte sekundy = 0;
@@ -84,6 +85,11 @@
   */
   void Menu();
   void Sipka();
+  void VypisMenu();
+  void Odpocet();
+  void UtokSmazan();
+  void CtiSD(char Zapis);
+ 
   
   void setup() {
     Serial.begin(9600);
@@ -97,22 +103,26 @@
     
     if (!SD.begin(10)){
       lcd.print("Chybi SD karta");
+      Serial.println("Chybi SD karta");
       delay(1000);
       return;
+    }
+    if (! rtc.begin()) {
+      lcd.println("chybi RTC");
+      Serial.flush();
+      abort();
     }    
+    if (! rtc.isrunning()) {
+      Serial.println("RTC nefakci, nastav cas!");
+    }
     for (byte i = 0; i < 3; i++) {
-      pinMode(pinyTlacitek[i], INPUT);
-      digitalWrite(pinyTlacitek[i], HIGH); // pull-up 
+      pinMode(pinyTlacitek[i], INPUT_PULLUP);
     }
     lcd.clear();
     lcd.setCursor(1,1);
     lcd.print("Bezdratova Pozarni");
     lcd.setCursor(5,2);
     lcd.print("Casomira");
-    lcd.setCursor(0,3);
-    lcd.print("V1.0");
-    //lcd.setCursor(13,3);
-    //lcd.print("By Marw");
     delay(3000);
     lcd.clear();
     while (SD.exists(String(ID + 1))){
@@ -122,7 +132,7 @@
  
 
   void loop() {
-   
+    //DateTime now = rtc.now();
     VypisMenu();
     for (byte i = 0; i < 3; i++){
       byte reading = digitalRead(pinyTlacitek[i]);
@@ -197,11 +207,8 @@
                       priprava++;
                     }
                   } break;
-                  case 2: {
-                    while ((digitalRead(2) == HIGH)&&(ahoj == false)){
-                      Odpocet();
-                    }
-                    ahoj = true;
+                  case 2: {           
+                    Odpocet();
                     minuty = priprava;
                     sekundy = 0;
                     menu = 1;
@@ -223,12 +230,26 @@
                   } break;
                   case 6: {
                     if (ID != 1){
-                      ID--;
+                      do {
+                        ID--;
+                      } while (!SD.exists(String(ID)));
                     }
                   } break;
                   case 10: {
                     if (SD.exists(String(ID + 1))){
                       ID++;
+                    }
+                    else {
+                      byte pomocnaID = ID;
+                      while (1){
+                        ID++;
+                        Serial.println(ID);
+                        if (SD.exists(String(ID))) break;
+                        if (ID == 20) {
+                          ID = pomocnaID;
+                          break;
+                        }
+                      }
                     }
                   } break;
                   case 13: {
@@ -461,7 +482,6 @@
             lcd.print("Manualne");
             lcd.setCursor(1,3);
             lcd.print("Zpet");
-            ahoj = false;
           //}
           //lcd.clear();
           //lcd.setCursor(1,1);
@@ -500,8 +520,8 @@
           lcd.setCursor(0,0);
           lcd.print("ID:");
           lcd.print(ID);
-          lcd.print(" cas ");
-          lcd.print("datum");
+          CtiSD('C');
+          CtiSD('D');
           lcd.setCursor(0,1);
           CtiSD('V');
           lcd.setCursor(7,1);
@@ -572,8 +592,11 @@
           lcd.setCursor(0,0);
           lcd.print("ID:");
           lcd.print(ID);
-          lcd.print(" cas ");
-          lcd.print("datum");
+          lcd.print(cas);
+          Zapis_C_D('C', cas);
+          lcd.print(" ");
+          lcd.print(datum);
+          Zapis_C_D('D', datum);
           lcd.setCursor(0,1);
           lcd.print(i);
           ZapisSD('V', i);
@@ -617,12 +640,18 @@
     lcd.print("ID:");
     a = millis();
     lcd.print(ID);
-    while (UtokDokonceny==0){ 
-        
+    while (UtokDokonceny == false){ 
+        DateTime now = rtc.now();
         lcd.setCursor(5,0);
-        lcd.print("cas  ");
-        lcd.setCursor(12,0);
-        lcd.print("datum");
+        lcd.print(now.hour(), DEC);
+        lcd.print(":");
+        lcd.print(now.minute(), DEC);
+        lcd.print(" ");
+        lcd.print(now.day(), DEC);
+        lcd.print("/");
+        lcd.print(now.month(), DEC);
+        lcd.print("/");
+        lcd.print(now.year(), DEC);
         lcd.setCursor(0,1);
         
         c = millis();
@@ -659,12 +688,13 @@
           L = i;
           P = i;
         }
+        //
         levy = false;
         pravy = false;
+        cas = String(now.hour()) + ":" + String(now.minute());
+        datum = String(now.day()) + "/" + String(now.month()) + "/" + String(now.year());
         UtokDokonceny = true;
-        //cas_utoku = cas;
-        //datum_utoku = datum;
-      }
+      }   
     } 
   }
 
@@ -709,6 +739,8 @@
       SD.remove(String(ID) + "/V.txt");
       SD.remove(String(ID) + "/L.txt");
       SD.remove(String(ID) + "/P.txt");
+      SD.remove(String(ID) + "/C.txt");
+      SD.remove(String(ID) + "/D.txt");
       SD.rmdir(String(ID));
       ID--;
     }
@@ -736,20 +768,34 @@
         sekundy = 60;
         minuty--;
       }
-      unsigned long currentMillis = millis();
-      if (currentMillis - pomocna >= 1000) {
-        pomocna = currentMillis;
+      unsigned long Millis = millis();
+      if (Millis - pomocna >= 1000) {
+        pomocna = Millis;
         sekundy--;
       }
-      
-      if(digitalRead(2) == LOW){
-        break;
+
+      byte reading = digitalRead(2);
+      if (reading != stare[2]) {
+        debounce[2] = millis();
       }
+      if ((millis() - debounce[2]) > Delay) {
+        if (reading != nove[2]) {
+          nove[2] = reading;
+          if (nove[2] == HIGH) {
+            inputFlags[2] = HIGH;
+          }
+        }
+      }
+      stare[2] = reading;
+      if (inputFlags[2] == HIGH) {
+        break;}
+      
        
     } while ((minuty != 0)||(sekundy != 0));
   }
   
-  void CtiSD(char Zapis){
+  void CtiSD(char Zapis) {
+    Serial.println(ID);
     myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt");
     if (myFile) {
       for (byte data = 0; data < 5; data++){
@@ -757,15 +803,26 @@
       }
       myFile.close();
     } else {
-      Serial.println("error opening  " + String(Zapis) + ".txt");
+      Serial.println("chyba otevreni V.txt");
     }
   }
+  
   void ZapisSD(char Zapis, double Terc){
     myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt", FILE_WRITE);
       if (myFile) {
         myFile.print(Terc);
         myFile.close();
-        Serial.println("Vys done.");
+        Serial.println("writing done.");
+      } else {
+        Serial.println("error writing to " + String(Zapis) + ".txt");
+      }
+  }
+  void Zapis_C_D(char Zapis, String hodnota){
+    myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt", FILE_WRITE);
+      if (myFile) {
+        myFile.print(hodnota);
+        myFile.close();
+        Serial.println("writing done.");
       } else {
         Serial.println("error writing to " + String(Zapis) + ".txt");
       }
