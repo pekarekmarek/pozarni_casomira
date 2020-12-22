@@ -787,8 +787,7 @@
         }
       }
       stare[2] = reading;
-      if (inputFlags[2] == HIGH) {
-        break;}
+      if (inputFlags[2] == HIGH) break;
       
        
     } while ((minuty != 0)||(sekundy != 0));
