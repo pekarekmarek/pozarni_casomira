@@ -80,6 +80,25 @@ byte baterie[] = {
    * 4-historie, 10-
    * 5-nejrychlejsi sestriky, 
   */
+
+struct node
+{
+  double data;
+  struct node *nextPtr;
+  struct node *prevPtr;
+  byte ID_Ptr;
+};
+
+struct node *firstNode;
+struct node *lastNode;
+int numberOfNodes = 0;
+
+struct node *currentNode;
+
+void createLinkedList(int numberOfNodes);
+void sortLinkedList(int numberOfNodes);
+void displayLinkedList();
+
 void Menu();
 void Sipka()
 {
@@ -92,7 +111,8 @@ void Odpocet();
 void UtokSmazan();
 void Automaticky();
 void Casomira();
-void CtiSD(char Zapis);
+void NejvyssiID();
+double CtiSD(char Zapis);
 void ZapisSD(char Zapis, double Terc);
 void Zapis_C_D(char Zapis, String hodnota);
 
@@ -106,6 +126,8 @@ void setup()
   lcd.createChar(0, sipkaVlevo);
   lcd.createChar(1, sipkaVpravo);
   lcd.createChar(2, baterie);
+  firstNode = NULL;
+  lastNode = NULL;
 
   if (!SD.begin(53))
   {
@@ -137,13 +159,7 @@ void setup()
   lcd.setCursor(5, 2);
   lcd.print("Casomira");
   delay(3000);
-  for (int pomocnaID = 1; pomocnaID < ID_MAX; pomocnaID++)
-  {
-    if (SD.exists(String(pomocnaID)))
-    {
-      ID = pomocnaID;
-    }
-  }
+  NejvyssiID();
   lcd.clear();
 }
 
@@ -176,8 +192,8 @@ void loop()
     {
       if (i == 0)
       { //SELECT
-        Serial.println("SELECT");
-        Serial.println(millis());
+        //Serial.println("SELECT");
+        //Serial.println(millis());
         switch (menu)
         {
         case 1: // Hlavni menu
@@ -188,6 +204,7 @@ void loop()
             {
             case 0:
             {
+              NejvyssiID();
               menu = 2;
               moznost = 1;
             }
@@ -206,8 +223,11 @@ void loop()
             break;
             case 3:
             {
+              createLinkedList(numberOfNodes);
+              sortLinkedList(numberOfNodes);
+              currentNode = firstNode;
               menu = 5;
-              moznost = 1;
+              moznost = 3;
             }
             break;
             }
@@ -331,12 +351,34 @@ void loop()
         break;
         case 5: // Nejrychlejsi casy
         {
-          switch (moznost)
+          switch (x)
           {
-          case 3:
+          case 0:
           {
             menu = 1;
             moznost = 3;
+          }
+          break;
+          case 6:
+          {
+            if (currentNode->prevPtr != NULL){
+              currentNode = currentNode->prevPtr;
+            }
+          }
+          break;
+          case 10:
+          {
+            if (currentNode->nextPtr != NULL){
+              currentNode = currentNode->nextPtr;
+            }
+          }
+          break;
+          case 13:
+          {
+            predchoziMenu = menu;
+            menu = 9; // Smazat
+            moznost = 2;
+            x = 4;
           }
           break;
           }
@@ -474,6 +516,7 @@ void loop()
         }
         break;
         case 4:
+        case 5:
         {
           if (x == 0)
           {
@@ -491,11 +534,6 @@ void loop()
           {
             x = 10;
           }
-        }
-        break;
-        case 5:
-        {
-          //Nejrychlejsi sestriky
         }
         break;
         case 6:
@@ -559,6 +597,7 @@ void loop()
         }
         break;
         case 4:
+        case 5:
         {
           if (x == 13)
           {
@@ -576,11 +615,6 @@ void loop()
           {
             x = 6;
           }
-        }
-        break;
-        case 5:
-        {
-          //Nejrychlejsi sestriky
         }
         break;
         case 6:
@@ -684,8 +718,12 @@ void Menu()
   }
   break;
   case 4: //Historie
+  case 5: //Nejrychlejsi sestriky
   {
 
+    if (menu == 5){
+      ID = currentNode->ID_Ptr;
+    }
     lcd.setCursor(0, 0);
     lcd.print("ID");
     lcd.print(ID);
@@ -711,15 +749,6 @@ void Menu()
     lcd.write(byte(1));
   }
   break;
-  case 5: //Nejrychlejsi sestriky
-  {
-
-    lcd.setCursor(0, 0);
-    lcd.print("Nejrychlejsi utoky");
-    lcd.setCursor(1, 3);
-    lcd.print("Zpet");
-  }
-  break;
   case 6: //Automaticky
   {
 
@@ -743,13 +772,6 @@ void Menu()
     lcd.print("Spustit casomiru");
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
-    for (int pomocnaID = ID; pomocnaID < ID_MAX; pomocnaID++)
-    {
-      if (SD.exists(String(pomocnaID)))
-      {
-        ID = pomocnaID;
-      }
-    }
   }
   break;
   case 8: //Casomira
@@ -875,13 +897,6 @@ void Automaticky()
   lcd.clear();
   lcd.setCursor(0, 1);
   lcd.print("Zavodnici na mista");
-  for (int pomocnaID = ID; pomocnaID < ID_MAX; pomocnaID++)
-  {
-    if (SD.exists(String(pomocnaID)))
-    {
-      ID = pomocnaID;
-    }
-  }
   delay(1000);
   lcd.clear();
   lcd.setCursor(0, 1);
@@ -909,8 +924,8 @@ void VypisMenu()
   lcd.print(ID);
   lcd.setCursor(19, 2);
   lcd.print(moznost);
-  lcd.setCursor(19, 3);
-  lcd.print(UtokDokonceny);
+  //lcd.setCursor(19, 3);
+  //lcd.print(UtokDokonceny);
 }
 
 void UtokSmazan()
@@ -937,6 +952,18 @@ void UtokSmazan()
   }
 
   delay(2000);
+}
+
+void NejvyssiID(){
+  numberOfNodes = 0;
+  for (int pomocnaID = 1; pomocnaID < ID_MAX; pomocnaID++)
+  {
+    if (SD.exists(String(pomocnaID)))
+    {
+      ID = pomocnaID;
+      numberOfNodes++;
+    }
+  }
 }
 
 void Odpocet()
@@ -990,7 +1017,7 @@ void Odpocet()
   } while ((minuty != 0) || (sekundy != 0));
 }
 
-void CtiSD(char Zapis)
+/*void CtiSD(char Zapis)
 {
   Serial.println(ID);
   myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt");
@@ -1016,6 +1043,101 @@ void CtiSD(char Zapis)
   {
     Serial.println("chyba otevreni " + String(Zapis) + ".txt");
   }
+}*/
+
+double CtiSD(char Zapis)
+{
+  Serial.println(ID);
+  double cas = 0;
+  float x = 10.0;
+  byte read;
+  byte pocet;
+  if (Zapis == 'D')
+  {
+    pocet = 8;
+  }
+  else
+  {
+    pocet = 5;
+  }
+  Serial.println(pocet);
+  myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt");
+  if (myFile)
+  {
+    for (byte data = 0; data < pocet; data++)
+    {
+      read = myFile.read();
+      lcd.write(read);
+      if (Zapis == 'V'){
+        switch (read)
+        {
+        case 48:
+        {
+          cas += x * 0;
+        }
+        break;
+        case 49:
+        {
+          cas += x * 1;
+        }
+        break;
+        case 50:
+        {
+          cas += x * 2;
+        }
+        break;
+        case 51:
+        {
+          cas += x * 3;
+        }
+        break;
+        case 52:
+        {
+          cas += x * 4;
+        }
+        break;
+        case 53:
+        {
+          cas += x * 5;
+        }
+        break;
+        case 54:
+        {
+          cas += x * 6;
+        }
+        break;
+        case 55:
+        {
+          cas += x * 7;
+        }
+        break;
+        case 56:
+        {
+          cas += x * 8;
+        }
+        break;
+        case 57:
+        {
+          cas += x * 9;
+        }
+        break;
+        }
+        //Serial.println(read);
+        if (read != 46)
+          x = x / 10;
+      }
+    }
+      
+    myFile.close();
+  }
+  else
+  {
+    Serial.println("chyba otevreni V.txt");
+  }
+
+  //Serial.println("--");
+  //Serial.println(cas);
+  return cas;
 }
 
 void ZapisSD(char Zapis, double Terc)
@@ -1045,5 +1167,108 @@ void Zapis_C_D(char Zapis, String hodnota)
   else
   {
     Serial.println("error writing to " + String(Zapis) + ".txt");
+  }
+}
+
+void createLinkedList(int numberOfNodes)
+{
+  struct node *newNode;
+  double nodeData;
+
+  firstNode = (struct node *)malloc(sizeof(struct node));
+
+  if (firstNode == NULL)
+  {
+    Serial.println("Memory cannot be allocated");
+  }
+  else
+  {
+    ID = 1;
+    nodeData = CtiSD('V');
+    Serial.println(nodeData);
+    firstNode->data = nodeData;
+    firstNode->prevPtr = NULL;
+    firstNode->nextPtr = NULL;
+    firstNode->ID_Ptr = ID;
+
+    lastNode = firstNode;
+      for (ID = 2; ID < ID_MAX; ID++)
+      {
+        if (SD.exists(String(ID)))
+        {
+          newNode = (struct node *)malloc(sizeof(struct node));
+          if (newNode == NULL){
+            Serial.println("Memory cannot be allocated");
+          }
+          else {
+            nodeData = CtiSD('V');
+            Serial.println(nodeData);
+            newNode->data = nodeData;
+            newNode->ID_Ptr = ID;
+            newNode->nextPtr = NULL;
+            newNode->prevPtr = NULL;
+
+            newNode->prevPtr = lastNode;
+            lastNode->nextPtr = newNode;
+
+            lastNode = newNode;
+
+          }  
+        }
+      }
+  }
+}
+
+void sortLinkedList(int numberOfNodes)
+{
+  int nodeCtr;
+  int ctr;
+  double nodeDataCopy;
+  byte nodeIDCopy;
+  struct node *currentNode;
+  struct node *nextNode;
+
+  for (nodeCtr = numberOfNodes - 2; nodeCtr >= 0; nodeCtr--)
+  {
+    currentNode = firstNode;
+    nextNode = currentNode->nextPtr;
+
+    for (ctr = 0; ctr <= nodeCtr; ctr++)
+    {
+      if (currentNode->data > nextNode->data)
+      {
+        nodeDataCopy = currentNode->data;
+        nodeIDCopy = currentNode->ID_Ptr;
+        currentNode->data = nextNode->data;
+        currentNode->ID_Ptr = nextNode->ID_Ptr;
+        nextNode->data = nodeDataCopy;
+        nextNode->ID_Ptr = nodeIDCopy;
+      }
+      currentNode = nextNode;
+      nextNode = nextNode->nextPtr;
+    }
+  }
+}
+
+void displayLinkedList()
+{
+  struct node *currentNode;
+  currentNode = firstNode;
+  Serial.println("Tam: ");
+  while (currentNode != NULL){
+        Serial.print(currentNode->data);
+        Serial.print(" -> ID: ");
+        Serial.print(currentNode->ID_Ptr);
+        Serial.println("\n");
+        currentNode = currentNode->nextPtr;
+    }
+  currentNode = lastNode;
+  Serial.println("A zpet:");
+  while (currentNode != NULL){
+    Serial.print(currentNode->data);
+    Serial.print(" -> ID: ");
+    Serial.print(currentNode->ID_Ptr);
+    Serial.println("\n");
+    currentNode = currentNode->prevPtr;
   }
 }
