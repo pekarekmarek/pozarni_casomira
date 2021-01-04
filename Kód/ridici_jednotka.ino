@@ -1,7 +1,8 @@
 /*
+   *        historie last ID -> promenna NejvyssiID
    *        indikace uspesne komunikace
-   *        automaticke mazani pokud cas > 60s
-   *        Pozarni utok 2 moznost 0
+   *        automaticke mazani pokud cas > 60s ?
+   *      
    * 
   */
 #include <SoftwareSerial.h>
@@ -28,6 +29,7 @@ File myFile;
 SdFat SD;
 byte ID = 1;
 const byte ID_MAX = 255;
+byte NejvyssiID = 0;
 /////////
 unsigned long pomocna = 0;
 
@@ -114,7 +116,7 @@ void Odpocet();
 void UtokSmazan();
 void Automaticky();
 void Casomira();
-void NejvyssiID();
+void najdiNejvyssiID();
 void CtiSD(char Zapis);
 double CtiV();
 void ZapisSD(char Zapis, double Terc);
@@ -149,7 +151,7 @@ void setup()
   if (!rtc.isrunning())
   {
     Serial.println("RTC nefakci, nastav cas!");
-    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
   for (byte i = 0; i < 3; i++)
   {
@@ -165,7 +167,7 @@ void setup()
   createLinkedList();
   sortLinkedList(numberOfNodes);
   currentNode = firstNode;
-  NejvyssiID();
+  najdiNejvyssiID();
   lcd.clear();
 }
 
@@ -198,21 +200,21 @@ void loop()
     {
       if (i == 0)
       { //SELECT
-        //Serial.println("SELECT");
-        //Serial.println(millis());
         switch (menu)
         {
         case 1: // Hlavni menu
         {
+          
           if (millis() > 8000)
           {
+            Serial.println(menu);
             switch (moznost)
             {
             case 0:
             {
               menu = 2;
               moznost = 1;
-              NejvyssiID();
+              ID = NejvyssiID;
             }
             break;
             case 1:
@@ -225,12 +227,14 @@ void loop()
             {
               menu = 4;
               moznost = 3;
+              ID = NejvyssiID;
             }
             break;
             case 3:
             {
               sortLinkedList(numberOfNodes);
               currentNode = firstNode;
+              //ID = NejvyssiID;
               ID = currentNode->ID_Ptr;
               menu = 5;
               moznost = 3;
@@ -330,7 +334,12 @@ void loop()
             }
             else
             {
-              byte pomocnaID = ID;
+              if (ID != NejvyssiID){
+                do {
+                  ID++;
+                } while (!SD.exists(String(ID)));
+              }
+              /*byte pomocnaID = ID;
               while (1)
               {
                 ID++;
@@ -342,7 +351,7 @@ void loop()
                   ID = pomocnaID;
                   break;
                 }
-              }
+              }*/
             }
           }
           break;
@@ -671,6 +680,7 @@ void loop()
 
 void Menu()
 {
+  Serial.println(menu);
   switch (menu)
   {
   case 1: // Hlavni menu
@@ -802,6 +812,7 @@ void Menu()
     if (UtokDokonceny != true)
     {
       ID++;
+      NejvyssiID++;
       if (manualne != true)
       {
         Automaticky();
@@ -848,7 +859,6 @@ void Menu()
   break;
   case 9: //Smazat
   {
-
     lcd.setCursor(2, 1);
     lcd.print("Opravdu smazat?");
     lcd.setCursor(5, 2);
@@ -868,7 +878,7 @@ void Casomira()
   i = 0;
   lcd.print(ID);
   DateTime now = rtc.now();
-  lcd.setCursor(5, 0);
+  lcd.print(" ");
   lcd.print(now.hour(), DEC);
   lcd.print(":");
   if (now.minute() < 10)
@@ -920,12 +930,7 @@ void Casomira()
   if (now.minute() < 10)
     cas += "0";
   cas += String(now.minute());
-  if (now.day() < 10)
-    datum += "0";
-  datum = String(now.day()) + "/";
-  if (now.month() < 10)
-    datum += "0";
-  datum = String(now.month() + "/" + String(now.year() - 2000));
+  datum = String(now.day()) + "/" + String(now.month()) + "/" + String(now.year() - 2000);
   UtokDokonceny = true;
 }
 
@@ -986,14 +991,16 @@ void UtokSmazan()
     {
       ID--;
     } while (!SD.exists(String(ID)));
-    //deleteNode();
-    //currentNode = currentNode->prevPtr;
+    deleteNode();
+    currentNode = currentNode->prevPtr;
+    numberOfNodes--;
+    najdiNejvyssiID();
   }
 
   delay(2000);
 }
 
-void NejvyssiID(){
+void najdiNejvyssiID(){
   numberOfNodes = 0;
   for (int pomocnaID = 0; pomocnaID < ID_MAX; pomocnaID++)
   {
@@ -1002,6 +1009,7 @@ void NejvyssiID(){
       ID = pomocnaID;
       numberOfNodes++;
     }
+    NejvyssiID = ID;
   }
 }
 
@@ -1067,7 +1075,7 @@ void CtiSD(char Zapis)
     while (read != 255){
       lcd.write(read);
       read = myFile.read();
-      Serial.print(read);
+      //Serial.print(read);
     }
 
     myFile.close();
@@ -1286,7 +1294,7 @@ void sortLinkedList(int numberOfNodes)
         nextNode->data = nodeDataCopy;
         nextNode->ID_Ptr = nodeIDCopy;
       }
-      
+
       currentNode = nextNode;
       nextNode = nextNode->nextPtr;
     }
@@ -1294,18 +1302,21 @@ void sortLinkedList(int numberOfNodes)
 }
 
 void deleteNode(){
+  struct node *nodeToDelete;
 
-  if (currentNode == firstNode){
+  nodeToDelete = currentNode;
+
+  if (nodeToDelete == firstNode){
     deleteFirstNode();
   }
-  else if(currentNode == lastNode){
+  else if(nodeToDelete == lastNode){
     deleteLastNode();
   }
-  else if (currentNode != NULL){
+  else if (nodeToDelete != NULL){
     currentNode->prevPtr->nextPtr = currentNode->nextPtr;
     currentNode->nextPtr->prevPtr = currentNode->prevPtr;
 
-    free(currentNode);
+    free(nodeToDelete);
   }
   else {
     Serial.println("Spatna pozice pro smazani.");
@@ -1343,26 +1354,3 @@ void deleteLastNode(){
     free(nodeToDelete);
   }
 }
-
-/*void displayLinkedList()
-{
-  struct node *currentNode;
-  currentNode = firstNode;
-  Serial.println("Tam: ");
-  while (currentNode != NULL){
-    Serial.print(currentNode->data);
-    Serial.print(" -> ID: ");
-    Serial.print(currentNode->ID_Ptr);
-    Serial.println("\n");
-    currentNode = currentNode->nextPtr;
-  } 
-  currentNode = lastNode;
-  Serial.println("A zpet:");
-  while (currentNode != NULL){
-    Serial.print(currentNode->data);
-    Serial.print(" -> ID: ");
-    Serial.print(currentNode->ID_Ptr);
-    Serial.println("\n");
-    currentNode = currentNode->prevPtr;
-  }
-}*/
