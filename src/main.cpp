@@ -4,6 +4,7 @@
    *        if jeden terc ok, druhy N
    *        indikace uspesne komunikace
    *        automaticke mazani pokud cas > 60s ?
+   * dsds
    *      
    * 
   */
@@ -12,6 +13,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
 #include "SdFat.h"
+
 #include "RTClib.h"
 
 #define buzzer 12
