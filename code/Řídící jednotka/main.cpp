@@ -34,7 +34,7 @@ byte sekundy = 0;
 File myFile;
 SdFat SD;
 byte ID = 1;
-const byte ID_MAX = 255;
+#define ID_MAX 255
 byte NejvyssiID = 0;
 /////////
 unsigned long pomocna = 0;

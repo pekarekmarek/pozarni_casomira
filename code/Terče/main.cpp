@@ -3,8 +3,8 @@
 
 SoftwareSerial HC12(10, 11); // TX, RX
 
-const int pravy = 4;
-const int levy = 5;
+#define pravy 4
+#define levy 5
 int terc = 0;
 
 void setup() {
