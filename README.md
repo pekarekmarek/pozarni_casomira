@@ -30,7 +30,7 @@ Základní menu:
 - Nastavitelný čas odpočtu přípravy základny. Maximálně lze nastavit 6 minut. Odpočet lze v případě potřeby přerušit stisknutím tlačítka "OK". Po skončení odpočtu následuje zvukový signál bzučáku a přejde se zpět do základního menu. 
 
 => Historie naměřených časů
-V tomto menu se vypisujou informace uložené na SD kartě. Každý útok má svoje ID a pod ním je zaznamenávan datum a čas útoků, oba časy shozených terčů a výsledný (pomalejší) z nich. Záznamy jsou v tomto menu seřazené podle data provedení útoku. Přepínat na předchozí nebo následující záznam lze pomocí výberu možnosti u specifických šipek. Záznamy je možné vymazat výběrem možnosti "Smazat" a následným potvrzením, že opravdu chceme smazat tento záznam. 
+- V tomto menu se vypisujou informace uložené na SD kartě. Každý útok má svoje ID a pod ním je zaznamenávan datum a čas útoků, oba časy shozených terčů a výsledný (pomalejší) z nich. Záznamy jsou v tomto menu seřazené podle data provedení útoku. Přepínat na předchozí nebo následující záznam lze pomocí výberu možnosti u specifických šipek. Záznamy je možné vymazat výběrem možnosti "Smazat" a následným potvrzením, že opravdu chceme smazat tento záznam. 
 
 => Nejrychlejší útoky
 - Záznamy jsou zde seřazeny vzestupně od nejrychlejšího výsledného času. Záznamy zde lze také smazat.
