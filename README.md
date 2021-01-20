@@ -1,6 +1,20 @@
 # Bezdrátová požární časomíra
 Bezdrátová časomíra pro požární sport řízená pomocí platformy Arduino. Obsahuje menu s výběrem možností startu požárního útoku, nastavitelným odpočtem přípravného času a historii naměřených časů uložených na SD kartě.
 
+Seznam modulů řídící jednotky:
+- Arduino Mega Pro Mini
+- HC-12 RF module
+- MicroSD Card module
+- DS1307 RTC modul
+- Nabíjecí modul pro Li-Ion články TP4056
+- Step-Up modul MT3608
+
+Seznam modulů jednotky u terčů:
+- Arduino Nano
+- HC-12 RF module
+- Nabíjecí modul pro Li-Ion články TP4056
+- Step-Up modul MT3608
+
 Menu: 
              | -> Automaticky |             
              |                | -> Spustit | -> Casomira | -> Smazat
@@ -18,7 +32,7 @@ Základní menu:
 - Na každém menu se nacházi možnost "Zpět" pro návrat na předchozí menu.
 
 => Požární útok
-Zde je na výběr způsob startu požárního útoku. Na výber jsou dvě možnosti, automatický způsob startu a manuální. Při potvrzení jedné nebo druhé možnosti se ještě přejde do menu pro potvrzení příslušného způsobu. Potvrzením možnosti "Spustit" se spustí časomíra. V automatickém způsobu startu se ještě před spuštěním časomíry objeví upozornění pro závodníky k připravení na start. Následuje náhodný odpočet a po signalizaci bzučákem je útok odstartován. V manuálním režimu se spustí časomíra hned po potvrzení možnosti "Spustit". Na displeji se zobrazuje momentální čas od spuštění časomíry. Při shození terče se zapíše na displej příslušný teřč a čas jeho shození. Požární útok se dokončí po shození obou terčů. Výsledný čas je ten pomalejší z nich. Na SD kartu se zapíše výsledný čas, časy obou terčů a také datum a čas provedení útoku. Každému útoku je přiřazeno patřičné ID. Hned po provedení útoku ho bude možnost v tomto menu smazat.
+Zde je na výběr způsob startu požárního útoku. Na výber jsou dvě možnosti, automatický způsob startu a manuální. Při potvrzení jedné nebo druhé možnosti se ještě přejde do menu pro potvrzení příslušného způsobu. Potvrzením možnosti "Spustit" se spustí časomíra. V automatickém způsobu startu se ještě před spuštěním časomíry objeví upozornění pro závodníky k připravení na start. Následuje náhodný odpočet a po signalizaci bzučákem je útok odstartován. V manuálním režimu se spustí časomíra hned po potvrzení možnosti "Spustit". Na displeji se zobrazuje momentální čas od spuštění časomíry. Při obdržení zprávy z jednotky u terčů se zapíše na displej příslušný teřč a čas jeho shození. Požární útok se dokončí po shození obou terčů. Výsledný čas je ten pomalejší z nich. Na SD kartu se zapíše výsledný čas, časy obou terčů a také datum a čas provedení útoku. Každému útoku je přiřazeno patřičné ID. Hned po provedení útoku ho bude možné v tomto menu smazat.
 
 => Odpočet přípravy
 Nastavitelný čas odpočtu přípravy základny. Maximálně lze nastavit 6 minut. Odpočet lze v případě potřeby přerušit stisknutím tlačítka "OK". Po skončení odpočtu následuje zvukový signál bzučáku a přejde se zpět do základního menu. 
@@ -32,7 +46,7 @@ Záznamy jsou zde seřazeny vzestupně od nejrychlejšího výsledného času. Z
 
 Bezdrátové moduly:
 
-- Přenos na dálku je zaručen moduly HC-12, které pracují na frekvenci 433MHz. 
+- Přenos na dálku je zaručen moduly HC-12, které pracují na frekvenci 433MHz. Moduly jsou nastaveny na nejvyšší přenosovou rychlost s dostatečným dosahem.
 
 Možnost nabíjení:
 
@@ -41,4 +55,7 @@ Možnost nabíjení:
 
 Indikace stavu baterie:
 
-
+- Snímaní hodnoty napětí baterie z výstupu nabíjecího modulu na analogový vstup arduina.
+- Přes rezistor s velkým odporem pro malý ztrátový výkon
+- Indikace baterie řídící jednotky i jednotky u terčů na displeji řídící jednotky.
+- Několik stavů pro zobrazení momentální hodnoty, indikace jestli se baterie nabíjí, nebo nenabíjí.
