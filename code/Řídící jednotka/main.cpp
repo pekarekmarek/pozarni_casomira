@@ -131,8 +131,8 @@ void Zapis_C_D(char Zapis, String hodnota);
 
 void setup()
 {
-  Serial.begin(9600);
-  HC12.begin(9600);
+  Serial.begin(115200);
+  HC12.begin(115200);
   lcd.init();
   lcd.clear();
   lcd.backlight();
