@@ -1,10 +1,9 @@
 /*
    *        Mazani primo po utoku -> deleteNode nefakci 
    *          ?? Sort pro IDcka?
-   *        if jeden terc ok, druhy N
    *        indikace uspesne komunikace
    *        automaticke mazani pokud cas > 60s ?
-   * d
+   * 
    *      
    * 
   */
@@ -13,7 +12,6 @@
 #include <LiquidCrystal_I2C.h>
 #include <SPI.h>
 #include "SdFat.h"
-
 #include "RTClib.h"
 
 #define buzzer 12
@@ -106,7 +104,8 @@ int numberOfNodes = 0;
 
 void createLinkedList();
 void AddtoList();
-void sortLinkedList(int numberOfNodes);
+void sortNejrychlejsi(int numberOfNodes);
+void sortID(int numberOfNodes);
 void displayLinkedList();
 void deleteNode();
 void deleteFirstNode();
@@ -174,7 +173,7 @@ void setup()
   lcd.print("Casomira");
   delay(2000);
   createLinkedList();
-  sortLinkedList(numberOfNodes);
+  sortNejrychlejsi(numberOfNodes);
   currentNode = firstNode;
   najdiNejvyssiID();
   lcd.clear();
@@ -234,14 +233,17 @@ void loop()
             break;
             case 2:
             {
+              sortID(numberOfNodes);
+              currentNode = lastNode;
+              ID = currentNode->ID_Ptr;
               menu = 4;
               moznost = 3;
-              ID = NejvyssiID;
+              //ID = NejvyssiID;
             }
             break;
             case 3:
             {
-              sortLinkedList(numberOfNodes);
+              sortNejrychlejsi(numberOfNodes);
               currentNode = firstNode;
               //ID = NejvyssiID;
               ID = currentNode->ID_Ptr;
@@ -324,44 +326,28 @@ void loop()
           break;
           case 6:
           {
-            if (ID != 1)
+            if (currentNode->prevPtr != NULL){
+              currentNode = currentNode->prevPtr;
+            }
+            /*if (ID != 1)
             {
               do
               {
                 ID--;
               } while (!SD.exists(String(ID)));
-            }
+            }*/
           }
           break;
           case 10:
           {
-            
-            
-            /*if (SD.exists(String(ID + 1)))
-            {
-              ID++;
+            if (currentNode->nextPtr != NULL){
+              currentNode = currentNode->nextPtr;
             }
-            else
-            {*/
-              if (ID != NejvyssiID){
+              /*if (ID != NejvyssiID){
                 do {
                   ID++;
                 } while (!SD.exists(String(ID)));
-              }
-              /*byte pomocnaID = ID;
-              while (1)
-              {
-                ID++;
-                Serial.println(ID);
-                if (SD.exists(String(ID)))
-                  break;
-                if (ID >= ID_MAX)
-                {
-                  ID = pomocnaID;
-                  break;
-                }
               }*/
-            //}
           }
           break;
           case 13:
@@ -756,9 +742,7 @@ void Menu()
   {
 
     if (ID != 0) {
-      if (menu == 5){
-        ID = currentNode->ID_Ptr;
-      }
+      ID = currentNode->ID_Ptr;
       lcd.setCursor(0, 0);
       lcd.print("ID");
       lcd.print(ID);
@@ -840,7 +824,7 @@ void Menu()
       ZapisSD('P', P);
       AddtoList();
       numberOfNodes++;
-      sortLinkedList(numberOfNodes);
+      //sortNejrychlejsi(numberOfNodes);
     }
     
     lcd.setCursor(0, 0);
@@ -997,11 +981,11 @@ void VypisMenu()
 void UtokSmazan()
 {
   lcd.clear();
-  lcd.setCursor(2, 1);
+  lcd.setCursor(3, 1);
   lcd.print("Utok ID:");
   lcd.print(ID);
   lcd.print(" byl");
-  lcd.setCursor(2, 2);
+  lcd.setCursor(3, 2);
   lcd.print("uspesne smazan");
   if (ID != 0)
   {
@@ -1011,25 +995,17 @@ void UtokSmazan()
     SD.remove(String(ID) + "/C.txt");
     SD.remove(String(ID) + "/D.txt");
     SD.rmdir(String(ID));
-    /*do
-    {
-      ID--;
-    } while (!SD.exists(String(ID)));*/
     deleteNode();
-    /*if (ID == NejvyssiID){
-      currentNode = currentNode->prevPtr;
+    najdiNejvyssiID();
+    if (predchoziMenu == 5) {
+      sortNejrychlejsi(numberOfNodes);
+      currentNode = firstNode;
     }
     else {
-      currentNode = currentNode->prevPtr;
-    }*/
-    //numberOfNodes--;
-    najdiNejvyssiID();
-    sortLinkedList(numberOfNodes);
-    currentNode = firstNode;
-    //ID = firstNode->ID_Ptr;
-
+      sortID(numberOfNodes);
+      currentNode = lastNode;
+    }
   }
-
   delay(1000);
 }
 
@@ -1304,7 +1280,7 @@ void AddtoList(){
   } 
 }
 
-void sortLinkedList(int numberOfNodes)
+void sortNejrychlejsi(int numberOfNodes)
 {
   int nodeCtr;
   int ctr;
@@ -1334,7 +1310,40 @@ void sortLinkedList(int numberOfNodes)
       nextNode = nextNode->nextPtr;
     }
   }
-  Serial.println("List sorted.");
+  Serial.println("List sorted - Nejrychlejsi.");
+}
+
+void sortID(int numberOfNodes)
+{
+  int nodeCtr;
+  int ctr;
+  double nodeDataCopy;
+  byte nodeIDCopy;
+  struct node *currentNode;
+  struct node *nextNode;
+
+  for (nodeCtr = numberOfNodes - 2; nodeCtr >= 0; nodeCtr--)
+  {
+    currentNode = firstNode;
+    nextNode = currentNode->nextPtr;
+
+    for (ctr = 0; ctr <= nodeCtr; ctr++)
+    {
+      if (currentNode->ID_Ptr > nextNode->ID_Ptr)
+      {
+        nodeDataCopy = currentNode->data;
+        nodeIDCopy = currentNode->ID_Ptr;
+        currentNode->data = nextNode->data;
+        currentNode->ID_Ptr = nextNode->ID_Ptr;
+        nextNode->data = nodeDataCopy;
+        nextNode->ID_Ptr = nodeIDCopy;
+      }
+
+      currentNode = nextNode;
+      nextNode = nextNode->nextPtr;
+    }
+  }
+  Serial.println("List sorted - ID");
 }
 
 void deleteNode(){
