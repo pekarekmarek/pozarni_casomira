@@ -1,11 +1,8 @@
 /*
-   *        Mazani primo po utoku -> deleteNode nefakci 
-   *          ?? Sort pro IDcka?
+   *     
    *        indikace uspesne komunikace
    *        automaticke mazani pokud cas > 60s ?
-   * 
-   *      
-   * 
+   *        indikace stavu baterie
   */
 #include <SoftwareSerial.h>
 #include <Wire.h>
@@ -141,23 +138,31 @@ void setup()
   lcd.createChar(2, baterie);
   firstNode = NULL;
   lastNode = NULL;
-
+  lcd.clear();
+  lcd.setCursor(1, 1);
+  lcd.print("Bezdratova Pozarni");
+  lcd.setCursor(5, 2);
+  lcd.print("Casomira");
+  delay(1500);
   if (!SD.begin(53))
   {
+    lcd.clear();
     lcd.print("Chybi SD karta");
     Serial.println("Chybi SD karta");
     delay(1000);
-    return;
   }
   if (!rtc.begin())
   {
-    lcd.println("chybi RTC");
+    Serial.print("chybi RTC");
     Serial.flush();
     abort();
   }
   if (!rtc.isrunning())
   {
-    Serial.println("RTC nefakci, nastav cas!");
+    lcd.clear();
+    lcd.setCursor(2,2);
+    lcd.print("RTC reset");
+    Serial.println("RTC se resetl, nastav cas");
     //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
   for (byte i = 0; i < 3; i++)
@@ -166,12 +171,6 @@ void setup()
     digitalWrite(pinyTlacitek[i], HIGH);
   }
   pinMode(buzzer, OUTPUT);
-  lcd.clear();
-  lcd.setCursor(1, 1);
-  lcd.print("Bezdratova Pozarni");
-  lcd.setCursor(5, 2);
-  lcd.print("Casomira");
-  delay(2000);
   createLinkedList();
   sortNejrychlejsi(numberOfNodes);
   currentNode = firstNode;
@@ -220,9 +219,19 @@ void loop()
             {
             case 0:
             {
-              menu = 2;
-              moznost = 1;
-              ID = NejvyssiID;
+              if (HC12.available()) {
+                if (SD.begin(53)){
+                  menu = 2;
+                  moznost = 1;
+                  ID = NejvyssiID;  
+                } else {
+                  menu = 11;
+                  moznost = 3;
+                }
+              } else {
+                menu = 10;
+                moznost = 3;
+              }
             }
             break;
             case 1:
@@ -502,6 +511,33 @@ void loop()
           }
         }
         break;
+        case 10: // RF
+        {
+          menu = 1;
+          moznost = 0;
+        }
+        break;
+        case 11: // SD
+        {
+          switch (x)
+          {
+          case 0:
+          {
+            menu = 2;
+            moznost = 1;
+            ID = NejvyssiID;
+          }
+          break;
+          case 15:
+          {
+            menu = 1;
+            moznost = 0;
+            x = 0;
+          }
+          break;
+          }
+        }
+        break;
         }
       }
       if (i == 1)
@@ -583,6 +619,14 @@ void loop()
           }
         }
         break;
+        case 11:
+        {
+          if (x == 15)
+          {
+            x = 0;
+          }
+        }
+        break;
         }
       }
       if (i == 2)
@@ -661,6 +705,14 @@ void loop()
           if (x == 4)
           {
             x = 11;
+          }
+        }
+        break;
+        case 11:
+        {
+          if (x == 0)
+          {
+            x = 15;
           }
         }
         break;
@@ -824,7 +876,6 @@ void Menu()
       ZapisSD('P', P);
       AddtoList();
       numberOfNodes++;
-      //sortNejrychlejsi(numberOfNodes);
     }
     
     lcd.setCursor(0, 0);
@@ -862,6 +913,28 @@ void Menu()
     lcd.print("Ano");
     lcd.setCursor(12, 2);
     lcd.print("Ne");
+  }
+  break;
+  case 10: //RF
+  {
+    lcd.setCursor(0, 1);
+    lcd.print("Zkontrolujte terce");
+    lcd.setCursor(1, 3);
+    lcd.print("Zpet");
+  }
+  break;
+  case 11: //Sd karta
+  {
+    lcd.setCursor(0, 0);
+    lcd.print("Chybi SD karta");
+    lcd.setCursor(0,1);
+    lcd.print("Utok nebude");
+    lcd.setCursor(0,2);
+    lcd.print("zaznamenavan");
+    lcd.setCursor(1,3);
+    lcd.print("Pokracovat");
+    lcd.setCursor(16,3);
+    lcd.print("Zpet");
   }
   break;
   }
@@ -1077,10 +1150,9 @@ void CtiSD(char Zapis)
 {
   //Serial.println(ID);
   myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt");
-  byte read;
   if (myFile)
   {
-    read = myFile.read();
+    byte read = myFile.read();
     while (read != 255){
       lcd.write(read);
       read = myFile.read();
