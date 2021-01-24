@@ -39,7 +39,8 @@ byte NejvyssiID = 0;
 /////////
 unsigned long pomocna = 0;
 
-const double CAS_MAX = 20.00;
+#define CAS_MAX 20.00
+#define RF_DELAY 0.2
 double L = 0, P = 0;
 
 double i = 0;
@@ -890,6 +891,8 @@ void Casomira()
   a = millis();
   i = 0;
   lcd.print(ID);
+  L = 0;
+  P = 0;
   DateTime now = rtc.now();
   lcd.print(" ");
   lcd.print(now.hour(), DEC);
@@ -911,33 +914,40 @@ void Casomira()
     c = millis();
     i = (c - a) / 1000;
     lcd.print(i);
-    //Serial.println(HC12.read());
+    Serial.println(HC12.read());
     if ((HC12.read() == 1) && (levy == false) && (i > 1))
     {
       lcd.setCursor(8, 1);
       lcd.print("L: ");
-      lcd.print(i);
-      L = i;
+      L = i - RF_DELAY;
+      lcd.print(L);
       levy = true;
       tone(buzzer, 2090, 500);
+      Serial.println(HC12.read());
     }
     if ((HC12.read() == 2) && (pravy == false) && (i > 1))
     {
       lcd.setCursor(8, 2);
       lcd.print("P: ");
-      P = i;
-      lcd.print(i);
+      P = i - RF_DELAY;
+      lcd.print(P);
       pravy = true;
       tone(buzzer, 2090, 500);
+      Serial.println(HC12.read());
     }
   }
   if (i >= CAS_MAX)
   {
-    L = 60.00;
-    P = 60.00;
+    if (L == 0) L = CAS_MAX;
+    if (P == 0) P = CAS_MAX;
+    i = CAS_MAX;
+  } else {
+    i -= RF_DELAY;
   }
+  lcd.setCursor(0,1);
+  lcd.print(i);
   //
-  digitalWrite(buzzer, LOW);
+  //digitalWrite(buzzer, LOW);
   levy = false;
   pravy = false;
   cas = String(now.hour()) + ":";
