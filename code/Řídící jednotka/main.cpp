@@ -12,6 +12,8 @@
 #include "RTClib.h"
 
 #define buzzer 12
+#define batterypin A1
+#define nabijenipin A3
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 RTC_DS1307 rtc;
@@ -70,7 +72,25 @@ byte sipkaVlevo[] = {
     B00100,
     B00000,
     B00000};
-byte baterie[] = {
+byte baterie100[] = {
+    B01110,
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B11111};
+byte baterie80[] = {
+    B01110,
+    B11011,
+    B10001,
+    B11111,
+    B11111,
+    B11111,
+    B11111,
+    B11111};
+byte baterie60[] = {
     B01110,
     B11011,
     B10001,
@@ -79,6 +99,25 @@ byte baterie[] = {
     B11111,
     B11111,
     B11111};
+byte baterie40[] = {
+    B01110,
+    B11011,
+    B10001,
+    B10001,
+    B10001,
+    B11111,
+    B11111,
+    B11111};
+byte baterie20[] = {
+    B01110,
+    B11011,
+    B10001,
+    B10001,
+    B10001,
+    B10001,
+    B11111,
+    B11111};
+
 /*1-hlavni, 
    * 2-utok, 6-auto, 7-manualne, 8-casomira
    * 3-priprava, 9-odpocet
@@ -135,7 +174,11 @@ void setup()
   lcd.backlight();
   lcd.createChar(0, sipkaVlevo);
   lcd.createChar(1, sipkaVpravo);
-  lcd.createChar(2, baterie);
+  lcd.createChar(100, baterie100);
+  lcd.createChar(80, baterie80);
+  lcd.createChar(60, baterie60);
+  lcd.createChar(40, baterie40);
+  lcd.createChar(20, baterie20);
   firstNode = NULL;
   lastNode = NULL;
   lcd.clear();
@@ -1038,15 +1081,22 @@ void Automaticky()
 
 void VypisMenu()
 {
-  lcd.setCursor(19, 0);
-  lcd.write(byte(2));
-  if (ID > 9)
+  lcd.setCursor(18,0);
+  lcd.print("R");
+  if (digitalRead(nabijenipin) == HIGH) nabijeni();
+  else battery('R');
+  lcd.setCursor(18,1);
+  lcd.print("T");
+  battery('T');
+  if (HC12.available()) lcd.print(HC12.read());
+
+  /*if (ID > 9)
     lcd.setCursor(18, 1);
   else
     lcd.setCursor(19, 1);
   lcd.print(ID);
   lcd.setCursor(19, 2);
-  lcd.print(moznost);
+  lcd.print(moznost);*/
   //lcd.setCursor(19, 3);
   //lcd.print(UtokDokonceny);
 }
@@ -1472,4 +1522,54 @@ void deleteLastNode(){
     
     free(nodeToDelete);
   }
+}
+
+/* 4,2V -> 3,2V
+5V....1024
+4,2V...860
+4V.....820  100%
+3,8V...780  80%
+3,6V...740  60%
+3,4V...700  40%
+3,2V...660  20%
+*/
+
+void battery(char zarizeni){
+  int stav;
+  if (zarizeni == 'R') {
+    stav = analogRead(batterypin);
+    if (stav >= 820)  stav = 100;
+    else if (stav >= 780 && stav < 820) stav = 80; 
+    else if (stav >= 740 && stav < 780) stav = 60;
+    else if (stav >= 700 && stav < 740) stav = 40;
+    else if (stav >= 600 && stav < 700) stav = 20;
+  }
+  else if (zarizeni == 'T') stav = HC12.read();
+  lcd.write(byte(stav));
+}
+
+void nabijeni(){
+  for (byte i = 20; i <= 100;){
+    lcd.setCursor(19,0);
+    lcd.write(byte(i));
+    if (millis() - pomocna >= 250)
+    {
+      pomocna = millis();
+      i += 20;
+    }
+  }
+
+
+
+
+  lcd.write(byte(20));
+  delay(250);
+  lcd.write(byte(40));
+  delay(250);
+  lcd.write(byte(60));
+  delay(250);
+  lcd.write(byte(80));
+  delay(250);
+  lcd.write(byte(100)); 
+  delay(250);
 }
