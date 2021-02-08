@@ -13,7 +13,7 @@
 
 #define buzzer 12
 #define batterypin A1
-#define nabijenipin A3
+#define nabijenipin 28
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 RTC_DS1307 rtc;
@@ -26,6 +26,7 @@ String cas, datum;
 byte priprava = 5;
 byte minuty = 0;
 byte sekundy = 0;
+int stav;
 
 //SD KARTA
 File myFile;
@@ -174,11 +175,11 @@ void setup()
   lcd.backlight();
   lcd.createChar(0, sipkaVlevo);
   lcd.createChar(1, sipkaVpravo);
-  lcd.createChar(100, baterie100);
-  lcd.createChar(80, baterie80);
-  lcd.createChar(60, baterie60);
-  lcd.createChar(40, baterie40);
-  lcd.createChar(20, baterie20);
+  lcd.createChar(2, baterie20);
+  lcd.createChar(3, baterie40);
+  lcd.createChar(4, baterie60);
+  lcd.createChar(5, baterie80);
+  lcd.createChar(6, baterie100);
   firstNode = NULL;
   lastNode = NULL;
   lcd.clear();
@@ -214,6 +215,8 @@ void setup()
     digitalWrite(pinyTlacitek[i], HIGH);
   }
   pinMode(buzzer, OUTPUT);
+  pinMode(batterypin, INPUT);
+  pinMode(nabijenipin, INPUT);
   createLinkedList();
   sortNejrychlejsi(numberOfNodes);
   currentNode = firstNode;
@@ -961,7 +964,7 @@ void Menu()
   case 10: //RF
   {
     lcd.setCursor(0, 1);
-    lcd.print("Zkontrolujte terce");
+    lcd.print("Zkontroluj terce");
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
   }
@@ -1081,14 +1084,18 @@ void Automaticky()
 
 void VypisMenu()
 {
-  lcd.setCursor(18,0);
-  lcd.print("R");
-  if (digitalRead(nabijenipin) == HIGH) nabijeni();
-  else battery('R');
+  if (digitalRead(nabijenipin) == HIGH){
+    nabijeni();
+  }
+  else {
+    lcd.setCursor(18,0);
+    lcd.print("R");
+    battery('R');
+  }
   lcd.setCursor(18,1);
   lcd.print("T");
-  battery('T');
-  if (HC12.available()) lcd.print(HC12.read());
+  if (HC12.available()) battery('T');
+  else lcd.print("X");
 
   /*if (ID > 9)
     lcd.setCursor(18, 1);
@@ -1096,9 +1103,9 @@ void VypisMenu()
     lcd.setCursor(19, 1);
   lcd.print(ID);
   lcd.setCursor(19, 2);
-  lcd.print(moznost);*/
-  //lcd.setCursor(19, 3);
-  //lcd.print(UtokDokonceny);
+  lcd.print(moznost);
+  lcd.setCursor(19, 3);
+  lcd.print(UtokDokonceny);*/
 }
 
 void UtokSmazan()
@@ -1535,41 +1542,32 @@ void deleteLastNode(){
 */
 
 void battery(char zarizeni){
-  int stav;
   if (zarizeni == 'R') {
     stav = analogRead(batterypin);
-    if (stav >= 820)  stav = 100;
-    else if (stav >= 780 && stav < 820) stav = 80; 
-    else if (stav >= 740 && stav < 780) stav = 60;
-    else if (stav >= 700 && stav < 740) stav = 40;
-    else if (stav >= 600 && stav < 700) stav = 20;
+    if (stav >= 820)  stav = 6;
+    else if (stav >= 780 && stav < 820) stav = 5; 
+    else if (stav >= 740 && stav < 780) stav = 4;
+    else if (stav >= 700 && stav < 740) stav = 3;
+    else if (stav >= 600 && stav < 700) stav = 2;
   }
-  else if (zarizeni == 'T') stav = HC12.read();
+  else if (zarizeni == 'T') {
+    if (millis() - pomocna >= 500){
+      pomocna = millis();
+      stav = HC12.read();
+    }
+  }
+  
   lcd.write(byte(stav));
 }
 
 void nabijeni(){
-  for (byte i = 20; i <= 100;){
+  for (byte i = 2; i <= 6;){
     lcd.setCursor(19,0);
     lcd.write(byte(i));
     if (millis() - pomocna >= 250)
     {
       pomocna = millis();
-      i += 20;
+      i++;
     }
   }
-
-
-
-
-  lcd.write(byte(20));
-  delay(250);
-  lcd.write(byte(40));
-  delay(250);
-  lcd.write(byte(60));
-  delay(250);
-  lcd.write(byte(80));
-  delay(250);
-  lcd.write(byte(100)); 
-  delay(250);
 }
