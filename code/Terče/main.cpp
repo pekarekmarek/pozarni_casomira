@@ -17,10 +17,10 @@ void setup() {
 void loop() {  
   stav = analogRead(batterypin);
   if (stav >= 820)  stav = 6;
-  else if (stav >= 780 && stav < 820) stav = 5; 
-  else if (stav >= 740 && stav < 780) stav = 4;
-  else if (stav >= 700 && stav < 740) stav = 3;
-  else if (stav >= 600 && stav < 700) stav = 2;
+  else if (stav >= 740 && stav < 820) stav = 5; 
+  else if (stav >= 700 && stav < 740) stav = 4;
+  else if (stav >= 640 && stav < 700) stav = 3;
+  else if (stav >= 600 && stav < 640) stav = 2;
   HC12.write(stav);
   Serial.println(stav);
   if (digitalRead(levy) == LOW){

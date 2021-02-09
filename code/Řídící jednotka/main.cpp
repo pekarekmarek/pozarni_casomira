@@ -1,8 +1,10 @@
 /*
-   *     
-   *        indikace uspesne komunikace
-   *        automaticke mazani pokud cas > 60s ?
-   *        indikace stavu baterie
+   *        
+   *        rf prijima signal i po odpojeni napajeni?
+   *        csv
+   *        automaticke mazani pokud oba casy > 60s ?
+   *        vyber tymu
+   *        
   */
 #include <SoftwareSerial.h>
 #include <Wire.h>
@@ -118,6 +120,15 @@ byte baterie20[] = {
     B10001,
     B11111,
     B11111};
+byte baterieError[] = {
+    B01110,
+    B11011,
+    B10101,
+    B10101,
+    B10101,
+    B10001,
+    B10101,
+    B11111};
 
 /*1-hlavni, 
    * 2-utok, 6-auto, 7-manualne, 8-casomira
@@ -165,21 +176,24 @@ void CtiSD(char Zapis);
 double CtiV();
 void ZapisSD(char Zapis, double Terc);
 void Zapis_C_D(char Zapis, String hodnota);
+void battery(char zarizeni);
+void nabijeni();
 
 void setup()
 {
-  Serial.begin(115200);
+  Serial.begin(9600);
   HC12.begin(115200);
   lcd.init();
   lcd.clear();
   lcd.backlight();
   lcd.createChar(0, sipkaVlevo);
   lcd.createChar(1, sipkaVpravo);
-  lcd.createChar(2, baterie20);
-  lcd.createChar(3, baterie40);
-  lcd.createChar(4, baterie60);
-  lcd.createChar(5, baterie80);
   lcd.createChar(6, baterie100);
+  lcd.createChar(5, baterie80);
+  lcd.createChar(4, baterie60);
+  lcd.createChar(3, baterie40);
+  lcd.createChar(2, baterie20);
+  lcd.createChar(7, baterieError);
   firstNode = NULL;
   lastNode = NULL;
   lcd.clear();
@@ -293,14 +307,12 @@ void loop()
               ID = currentNode->ID_Ptr;
               menu = 4;
               moznost = 3;
-              //ID = NejvyssiID;
             }
             break;
             case 3:
             {
               sortNejrychlejsi(numberOfNodes);
               currentNode = firstNode;
-              //ID = NejvyssiID;
               ID = currentNode->ID_Ptr;
               menu = 5;
               moznost = 3;
@@ -383,14 +395,7 @@ void loop()
           {
             if (currentNode->prevPtr != NULL){
               currentNode = currentNode->prevPtr;
-            }
-            /*if (ID != 1)
-            {
-              do
-              {
-                ID--;
-              } while (!SD.exists(String(ID)));
-            }*/
+            }     
           }
           break;
           case 10:
@@ -398,11 +403,6 @@ void loop()
             if (currentNode->nextPtr != NULL){
               currentNode = currentNode->nextPtr;
             }
-              /*if (ID != NejvyssiID){
-                do {
-                  ID++;
-                } while (!SD.exists(String(ID)));
-              }*/
           }
           break;
           case 13:
@@ -964,7 +964,7 @@ void Menu()
   case 10: //RF
   {
     lcd.setCursor(0, 1);
-    lcd.print("Zkontroluj terce");
+    lcd.print("Zkontrolujte terce");
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
   }
@@ -1084,28 +1084,18 @@ void Automaticky()
 
 void VypisMenu()
 {
-  if (digitalRead(nabijenipin) == HIGH){
-    nabijeni();
-  }
-  else {
-    lcd.setCursor(18,0);
-    lcd.print("R");
-    battery('R');
-  }
+  lcd.setCursor(18,0);
+  lcd.print("R");
+  if (digitalRead(nabijenipin) == HIGH) nabijeni();
+  else battery('R');
   lcd.setCursor(18,1);
   lcd.print("T");
-  if (HC12.available()) battery('T');
-  else lcd.print("X");
-
-  /*if (ID > 9)
-    lcd.setCursor(18, 1);
-  else
-    lcd.setCursor(19, 1);
-  lcd.print(ID);
-  lcd.setCursor(19, 2);
-  lcd.print(moznost);
-  lcd.setCursor(19, 3);
-  lcd.print(UtokDokonceny);*/
+  if (HC12.available()) {battery('T');
+    Serial.println("radio ok");
+  }
+  else {lcd.print("X");
+    Serial.println("No radio");
+  }
 }
 
 void UtokSmazan()
@@ -1224,6 +1214,27 @@ void CtiSD(char Zapis)
   }
 }
 
+void CtiCSV(String team, char Zapis)
+{
+  //Serial.println(ID);
+  myFile = SD.open(String(team) + ".csv");
+  if (myFile)
+  {
+    byte read = myFile.read();
+    while (read != 255){
+      lcd.write(read);
+      read = myFile.read();
+      //Serial.print(read);
+    }
+
+    myFile.close();
+  }
+  else
+  {
+    Serial.println("chyba otevreni " + String(team) + ".csv");
+  }
+}
+
 double CtiV()
 {
   //Serial.println(ID);
@@ -1316,6 +1327,29 @@ void ZapisSD(char Zapis, double Terc)
   else
   {
     Serial.println("error writing to " + String(Zapis) + ".txt");
+  }
+}
+
+void ZapisCSV(String team)
+{
+  myFile = SD.open(String(team) + ".csv", FILE_WRITE);
+  String dataString = "";
+  if (myFile)
+  {
+    dataString = String(ID) + ",";
+    if (i < 10) dataString += "0";
+    dataString += String(i) + ",";
+    if (L < 10) dataString += "0";
+    dataString += String(L) + ",";
+    if (P < 10) dataString += "0";
+    dataString += String(P) + "," + String(datum) + "," + String(cas);
+    myFile.println(dataString);
+    myFile.close();
+    Serial.println("writing done to " + String(team) + ".csv");
+  }
+  else
+  {
+    Serial.println("error writing to " + String(team) + ".csv");
   }
 }
 
@@ -1531,24 +1565,15 @@ void deleteLastNode(){
   }
 }
 
-/* 4,2V -> 3,2V
-5V....1024
-4,2V...860
-4V.....820  100%
-3,8V...780  80%
-3,6V...740  60%
-3,4V...700  40%
-3,2V...660  20%
-*/
-
 void battery(char zarizeni){
   if (zarizeni == 'R') {
     stav = analogRead(batterypin);
     if (stav >= 820)  stav = 6;
-    else if (stav >= 780 && stav < 820) stav = 5; 
-    else if (stav >= 740 && stav < 780) stav = 4;
-    else if (stav >= 700 && stav < 740) stav = 3;
-    else if (stav >= 600 && stav < 700) stav = 2;
+    else if (stav >= 740 && stav < 820) stav = 5; 
+    else if (stav >= 700 && stav < 740) stav = 4;
+    else if (stav >= 640 && stav < 700) stav = 3;
+    else if (stav >= 600 && stav < 640) stav = 2;
+    else stav = 7;
   }
   else if (zarizeni == 'T') {
     if (millis() - pomocna >= 500){
@@ -1556,8 +1581,17 @@ void battery(char zarizeni){
       stav = HC12.read();
     }
   }
-  
   lcd.write(byte(stav));
+
+  /* 4,2V -> 3,2V
+  5V....1024
+  4,2V...860
+  4V.....820  100%
+  3,8V...780  80%
+  3,6V...740  60%
+  3,4V...700  40%
+  3,2V...660  20%
+  */
 }
 
 void nabijeni(){
@@ -1571,3 +1605,4 @@ void nabijeni(){
     }
   }
 }
+
