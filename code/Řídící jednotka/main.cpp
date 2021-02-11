@@ -6,6 +6,7 @@
    *        vyber tymu
    *        
   */
+#include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
@@ -29,6 +30,12 @@ byte priprava = 5;
 byte minuty = 0;
 byte sekundy = 0;
 int stav;
+
+//
+byte pocetTeamu = 2;
+String team = "tym1";
+bool kurzor = false;
+//
 
 //SD KARTA
 File myFile;
@@ -54,7 +61,7 @@ bool inputFlags[3] = {LOW, LOW, LOW};
 long debounce[3] = {0, 0, 0};
 byte Delay = 5;
 
-byte menu = 1;
+byte menu = 0;
 byte moznost = 0;
 
 byte sipkaVpravo[] = {
@@ -165,6 +172,7 @@ void Sipka()
   lcd.clear();
   lcd.setCursor(x, moznost);
   lcd.print(">");
+  lcd.cursor();
 }
 void VypisMenu();
 void Odpocet();
@@ -178,6 +186,7 @@ void ZapisSD(char Zapis, double Terc);
 void Zapis_C_D(char Zapis, String hodnota);
 void battery(char zarizeni);
 void nabijeni();
+void cursor();
 
 void setup()
 {
@@ -240,6 +249,7 @@ void setup()
 
 void loop()
 {
+  //if (menu == 12) cursor();
   VypisMenu();
   for (byte i = 0; i < 3; i++)
   {
@@ -269,6 +279,43 @@ void loop()
       { //SELECT
         switch (menu)
         {
+        case 0: // Hlavni menu
+        {
+          
+          if (millis() > 8000)
+          {
+            Serial.println(menu);
+            switch (moznost)
+            {
+            case 0:
+            {
+              team = "team1";
+            }
+            break;
+            case 1:
+            {
+              team = "team2";
+            }
+            break;
+            case 2:
+            {
+              team = "team3";
+            }
+            break;
+            case 3: //novy team
+            {
+              menu = 12;
+              moznost = 3;
+            }
+            break;
+            }
+            if (moznost != 3) {
+              menu = 1;
+              moznost = 0;
+            }
+          }
+        }
+        break;
         case 1: // Hlavni menu
         {
           
@@ -584,12 +631,59 @@ void loop()
           }
         }
         break;
+        case 12: // Vytvorit team
+        {
+          switch (x)
+          {
+          case 0:
+          {
+            menu = 0;
+            moznost = pocetTeamu - 1;
+            //create sd
+          }
+          break;
+          case 15:
+          {
+            menu = 0;
+            moznost = pocetTeamu - 1;
+            x = 0;
+          }
+          break;
+          }
+        }
+        break;
         }
       }
       if (i == 1)
       { //UP
         switch (menu)
         {
+        case 0:
+        { 
+          switch(pocetTeamu)
+          {
+            case 1:
+            {
+              if (moznost == 0) moznost = 3;
+              else moznost = 0;
+            }
+            break;
+            case 2:
+            {
+              if (moznost == 0) moznost = 3;
+              else if (moznost == 1) moznost--;
+              else moznost = 1;
+            }
+            break;
+            case 3:
+            {
+              if (moznost == 0) moznost = 3;
+              else moznost--;
+            }
+            break;
+          }
+        }
+        break;
         case 1:
         { // 4 Moznosti
           if (moznost == 0)
@@ -673,12 +767,49 @@ void loop()
           }
         }
         break;
+        case 12:
+        { // Vyber tymu
+          if (x == 0)
+          {
+            x = 15;
+          }
+          else
+          {
+            x = 0;
+          }
+        }
+        break;
         }
       }
       if (i == 2)
       { //DOWN
         switch (menu)
         {
+        case 0:
+        { 
+          switch(pocetTeamu)
+          {
+            case 1:
+            {
+              moznost = 0;
+            }
+            break;
+            case 2:
+            {
+              if (moznost == 3) moznost = 0;
+              else if (moznost == 0) moznost++;
+              else moznost = 3;
+            }
+            break;
+            case 3:
+            {
+              if (moznost == 3) moznost = 0;
+              else moznost++;
+            }
+            break;
+          }
+        }
+        break;
         case 1:
         { // 4 Moznosti
           if (moznost == 3)
@@ -762,6 +893,18 @@ void loop()
           }
         }
         break;
+        case 12:
+        { //Vyber tymu
+          if (x == 0)
+          {
+            x = 15;
+          }
+          else
+          {
+            x = 0;
+          }
+        }
+        break;
         }
       }
       inputFlags[i] = LOW;
@@ -776,6 +919,23 @@ void Menu()
   Serial.println(menu);
   switch (menu)
   {
+  case 0: // Vyber tymu
+  {
+
+    lcd.setCursor(1, 0);
+    lcd.print("tym1");
+    lcd.setCursor(1, 1);
+    lcd.print("tym2");
+    lcd.setCursor(1,3);
+    lcd.print("Novy team");
+    /*lcd.home();
+    lcd.print("Vyber teamu:");
+    for (byte i = 1; i <= pocetTeamu; i++){
+      lcd.setCursor(1, i);
+      lcd.print("Team" + String(i));
+    }*/
+  }
+  break;
   case 1: // Hlavni menu
   {
 
@@ -979,6 +1139,22 @@ void Menu()
     lcd.print("zaznamenavan");
     lcd.setCursor(1,3);
     lcd.print("Pokracovat");
+    lcd.setCursor(16,3);
+    lcd.print("Zpet");
+  }
+  break;
+  case 12: // novy tym
+  {
+
+    lcd.home();
+    lcd.print("ABCDEFGHIJKLMNOPQ");
+    lcd.setCursor(0,1);
+    lcd.print("RSTUVXYZ0123456789");
+    //lcd.print("abcdefghijklmnopqrstuvxyz0123456789");
+    lcd.setCursor(0, 2);
+    lcd.print(team);
+    lcd.setCursor(1, 3);
+    lcd.print("Vytvorit");
     lcd.setCursor(16,3);
     lcd.print("Zpet");
   }
@@ -1565,6 +1741,23 @@ void deleteLastNode(){
   }
 }
 
+void cursor(){
+  lcd.setCursor(x,moznost);
+  /*if (millis() - pomocna >= 500){
+    pomocna =  millis();
+    if (kurzor == false){
+      lcd.cursor();
+      kurzor = true;
+    } else if (kurzor == true) {
+      lcd.noCursor();
+      kurzor = false;
+    }
+  }*/
+  lcd.cursor();
+ 
+
+}
+
 void battery(char zarizeni){
   if (zarizeni == 'R') {
     stav = analogRead(batterypin);
@@ -1589,7 +1782,7 @@ void battery(char zarizeni){
   4V.....820  100%
   3,8V...780  80%
   3,6V...740  60%
-  3,4V...700  40%
+  3,4V...700  40% 
   3,2V...660  20%
   */
 }
