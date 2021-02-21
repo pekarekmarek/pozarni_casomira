@@ -33,7 +33,7 @@ int stav;
 
 //
 byte pocetTeamu = 2;
-String team = "tym1";
+String team = "";
 //bool kurzor = false;
 char znakyMale[2][20] = {{'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t'},
 {'u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','_'}};
@@ -638,7 +638,11 @@ void loop()
         case 12: // Vytvorit team  11/13
         {
           if (moznost == 0 || moznost == 1){
-            //string += pole[x][moznost];
+            if (team.length() < 11) {
+              if (malepismena) team += znakyMale[moznost][x];
+              else team += znakyVelke[moznost][x];
+            }  
+              Serial.println(team.length()); 
           }
           else {
             switch (x)
@@ -658,7 +662,7 @@ void loop()
             break;
             case 13:
             {
-              //Strlen -1
+              team.remove(team.length() - 1,1);
             }
             break;
             case 15:
@@ -1237,7 +1241,6 @@ void Menu()
     if (moznost != 3 && moznost != 2) {
       lcd.setCursor(x, moznost);
       lcd.blink();
-      //lcd.cursor_on();
     }
 
   }
@@ -1354,7 +1357,7 @@ void VypisMenu()
       Serial.println("radio ok");
     }
     else {lcd.print("X");
-      Serial.println("No radio");
+      //Serial.println("No radio");
     }
   }  
 }
@@ -1826,9 +1829,9 @@ void deleteLastNode(){
   }
 }
 
-void cursor(){
+/*void cursor(){
   lcd.setCursor(x,moznost);
-  /*if (millis() - pomocna >= 500){
+  if (millis() - pomocna >= 500){
     pomocna =  millis();
     if (kurzor == false){
       lcd.cursor();
@@ -1837,11 +1840,11 @@ void cursor(){
       lcd.noCursor();
       kurzor = false;
     }
-  }*/
+  }
   lcd.cursor();
  
 
-}
+}*/
 
 void battery(char zarizeni){
   if (zarizeni == 'R') {
