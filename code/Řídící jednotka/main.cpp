@@ -635,25 +635,41 @@ void loop()
           }
         }
         break;
-        case 12: // Vytvorit team
+        case 12: // Vytvorit team  11/13
         {
-          switch (x)
-          {
-          case 0:
-          {
-            menu = 0;
-            moznost = pocetTeamu - 1;
-            //create sd
+          if (moznost == 0 || moznost == 1){
+            //string += pole[x][moznost];
           }
-          break;
-          case 15:
-          {
-            menu = 0;
-            moznost = 0;
-            x = 0;
-          }
-          break;
-          }
+          else {
+            switch (x)
+            {
+            case 0:
+            {
+              menu = 0;
+              moznost = pocetTeamu - 1; //
+              //create sd
+            }
+            break;
+            case 11:
+            {
+              if (malepismena) malepismena = false;
+              else malepismena = true;
+            }
+            break;
+            case 13:
+            {
+              //Strlen -1
+            }
+            break;
+            case 15:
+            {
+              menu = 0;
+              moznost = 0;
+              x = 0;
+            }
+            break;
+            }
+          } 
         }
         break;
         }
@@ -781,9 +797,17 @@ void loop()
           }
           else if (moznost == 1) {
             if (x == 16) {
+              moznost = 2;
+              x = 11;
+            } else x++;
+          }
+          else if (moznost == 2) {
+            if (x == 11) {
+              x = 13;
+            } else {
               moznost = 3;
               x = 0;
-            } else x++;
+            }
           }
           else if (moznost == 3) {
             if (x == 0)
@@ -926,11 +950,17 @@ void loop()
               x = 19;
             } else x--;
           }
+          else if (moznost == 2) {
+            if (x == 11) {
+              moznost = 1;
+              x = 16;
+            } else x = 11;
+          }
           else if (moznost == 3) {
             if (x == 0)
             {
-              moznost = 1;
-              x = 16;
+              moznost = 2;
+              x = 13;
             }
             else
             {
@@ -1204,7 +1234,7 @@ void Menu()
     lcd.print("Vytvorit");
     lcd.setCursor(16,3);
     lcd.print("Zpet");
-    if (moznost != 3) {
+    if (moznost != 3 && moznost != 2) {
       lcd.setCursor(x, moznost);
       lcd.blink();
       //lcd.cursor_on();
