@@ -34,7 +34,12 @@ int stav;
 //
 byte pocetTeamu = 2;
 String team = "tym1";
-bool kurzor = false;
+//bool kurzor = false;
+char znakyMale[2][20] = {{'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t'},
+{'u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','_'}};
+char znakyVelke[2][20] = {{'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T'},
+{'U','V','W','X','Y','Z','0','1','2','3','4','5','6','7','8','9','_'}};
+bool malepismena = true;
 //
 
 //SD KARTA
@@ -172,7 +177,6 @@ void Sipka()
   lcd.clear();
   lcd.setCursor(x, moznost);
   lcd.print(">");
-  lcd.cursor();
 }
 void VypisMenu();
 void Odpocet();
@@ -279,7 +283,7 @@ void loop()
       { //SELECT
         switch (menu)
         {
-        case 0: // Hlavni menu
+        case 0: // vyber teamu
         {
           
           if (millis() > 8000)
@@ -645,7 +649,7 @@ void loop()
           case 15:
           {
             menu = 0;
-            moznost = pocetTeamu - 1;
+            moznost = 0;
             x = 0;
           }
           break;
@@ -769,13 +773,28 @@ void loop()
         break;
         case 12:
         { // Vyber tymu
-          if (x == 0)
-          {
-            x = 15;
+          if (moznost == 0){
+            if (x == 19){
+              moznost = 1;
+              x = 0;
+            } else x++;
           }
-          else
-          {
-            x = 0;
+          else if (moznost == 1) {
+            if (x == 16) {
+              moznost = 3;
+              x = 0;
+            } else x++;
+          }
+          else if (moznost == 3) {
+            if (x == 0)
+            {
+              x = 15;
+            }
+            else
+            {
+              moznost = 0;
+              x = 0;
+            }
           }
         }
         break;
@@ -895,13 +914,28 @@ void loop()
         break;
         case 12:
         { //Vyber tymu
-          if (x == 0)
-          {
-            x = 15;
+         if (moznost == 0){
+            if (x == 0){
+              moznost = 3;
+              x = 15;
+            } else x--;
           }
-          else
-          {
-            x = 0;
+          else if (moznost == 1) {
+            if (x == 0) {
+              moznost = 0;
+              x = 19;
+            } else x--;
+          }
+          else if (moznost == 3) {
+            if (x == 0)
+            {
+              moznost = 1;
+              x = 16;
+            }
+            else
+            {
+              x = 0;
+            }
           }
         }
         break;
@@ -1147,16 +1181,35 @@ void Menu()
   {
 
     lcd.home();
-    lcd.print("ABCDEFGHIJKLMNOPQ");
-    lcd.setCursor(0,1);
-    lcd.print("RSTUVXYZ0123456789");
-    //lcd.print("abcdefghijklmnopqrstuvxyz0123456789");
+    //lcd.cursor_off();
+    lcd.noBlink();
+    for (byte i = 0; i < 2; i++){
+      for (byte j = 0; j < 20; j++){
+        if (i != 1 || j <= 16) {
+          if (malepismena) lcd.print(znakyMale[i][j]);
+          else lcd.print(znakyVelke[i][j]);
+        }
+      }
+      lcd.setCursor(0,1);
+    }
     lcd.setCursor(0, 2);
     lcd.print(team);
+    lcd.print("_");
+    lcd.setCursor(12,2);
+    if (malepismena) lcd.write(byte(1));
+    else lcd.write(byte(0));
+    lcd.setCursor(14,2);
+    lcd.print("Smazat");
     lcd.setCursor(1, 3);
     lcd.print("Vytvorit");
     lcd.setCursor(16,3);
     lcd.print("Zpet");
+    if (moznost != 3) {
+      lcd.setCursor(x, moznost);
+      lcd.blink();
+      //lcd.cursor_on();
+    }
+
   }
   break;
   }
@@ -1260,18 +1313,20 @@ void Automaticky()
 
 void VypisMenu()
 {
-  lcd.setCursor(18,0);
-  lcd.print("R");
-  if (digitalRead(nabijenipin) == HIGH) nabijeni();
-  else battery('R');
-  lcd.setCursor(18,1);
-  lcd.print("T");
-  if (HC12.available()) {battery('T');
-    Serial.println("radio ok");
-  }
-  else {lcd.print("X");
-    Serial.println("No radio");
-  }
+  if (menu != 12) {
+    lcd.setCursor(18,0);
+    lcd.print("R");
+    if (digitalRead(nabijenipin) == HIGH) nabijeni();
+    else battery('R');
+    lcd.setCursor(18,1);
+    lcd.print("T");
+    if (HC12.available()) {battery('T');
+      Serial.println("radio ok");
+    }
+    else {lcd.print("X");
+      Serial.println("No radio");
+    }
+  }  
 }
 
 void UtokSmazan()
@@ -1774,7 +1829,8 @@ void battery(char zarizeni){
       stav = HC12.read();
     }
   }
-  lcd.write(byte(stav));
+  if (stav == 8) nabijeni();
+  else lcd.write(byte(stav));
 
   /* 4,2V -> 3,2V
   5V....1024
