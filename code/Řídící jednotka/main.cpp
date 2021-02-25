@@ -23,6 +23,7 @@ RTC_DS1307 rtc;
 SoftwareSerial HC12(10,11); // TX - RX
 
 bool levy = false, pravy = false;
+byte utok = 0;
 bool UtokDokonceny = false, manualne = false;
 byte terc = 0, x = 0, predchoziMenu;
 String cas, datum;
@@ -1250,6 +1251,8 @@ void Menu()
 
 void Casomira()
 {
+  utok = 1;
+  HC12.write(utok);
   tone(buzzer, 2100, 500);
   lcd.clear();
   lcd.print("ID");
@@ -1280,7 +1283,7 @@ void Casomira()
     i = (c - a) / 1000;
     lcd.print(i);
     Serial.println(HC12.read());
-    if ((HC12.read() == 1) && (levy == false) && (i > 1))
+    if ((HC12.read() == 11) && (levy == false) && (i > 1))
     {
       lcd.setCursor(8, 1);
       lcd.print("L: ");
@@ -1290,7 +1293,7 @@ void Casomira()
       tone(buzzer, 2090, 500);
       Serial.println(HC12.read());
     }
-    if ((HC12.read() == 2) && (pravy == false) && (i > 1))
+    if ((HC12.read() == 66) && (pravy == false) && (i > 1))
     {
       lcd.setCursor(8, 2);
       lcd.print("P: ");
@@ -1321,6 +1324,8 @@ void Casomira()
   cas += String(now.minute());
   datum = String(now.day()) + "/" + String(now.month()) + "/" + String(now.year() - 2000);
   UtokDokonceny = true;
+  utok = 0;
+  HC12.write(utok);
 }
 
 void Automaticky()
@@ -1354,7 +1359,7 @@ void VypisMenu()
     lcd.setCursor(18,1);
     lcd.print("T");
     if (HC12.available()) {battery('T');
-      Serial.println("radio ok");
+      Serial.println(HC12.read());
     }
     else {lcd.print("X");
       //Serial.println("No radio");

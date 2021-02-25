@@ -27,12 +27,12 @@ void loop() {
   HC12.write(stav);
   Serial.println(stav);
   if (digitalRead(levy) == LOW){
-    terc = 1;
+    terc = 11;
     HC12.write(terc);
     Serial.println(terc);
   }
   if (digitalRead(pravy) == LOW) {
-    terc = 2;
+    terc = 66;
     HC12.write(terc);
     Serial.println(terc);
     
