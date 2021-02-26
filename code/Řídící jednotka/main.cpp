@@ -1561,8 +1561,8 @@ void CtiCSV(byte Field)
 
 double CtiV()
 {
-  //Serial.println(ID);
-  double cas = 0;
+  
+  /*double cas = 0;
   float x = 10.0;
   byte read;
   myFile = SD.open(String(ID) + "/V.txt");
@@ -1635,6 +1635,29 @@ double CtiV()
   {
     Serial.println("chyba otevreni V.txt");
   }
+  return cas;*/
+  String teamcsv = String(team) + ".csv";
+  char FILENAME[15];
+  teamcsv.toCharArray(FILENAME,15);
+
+  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
+    Serial.println("Chyba otevreni " + String(team) + ".csv");
+  }
+  String IDstring = "ID" + String(ID);
+  char IDcsv[6];
+  IDstring.toCharArray(IDcsv, 5);
+  csv.gotoLine(IDcsv);
+  const byte BUFFER_SIZE = 8;
+  char buffer[BUFFER_SIZE + 1];
+  buffer[BUFFER_SIZE] = '\0';
+
+  csv.nextField();
+  
+  csv.readField(buffer, BUFFER_SIZE); 
+  String stringBuffer = buffer;
+
+  double cas = stringBuffer.toDouble();
+  csv.close();
   return cas;
 }
 
