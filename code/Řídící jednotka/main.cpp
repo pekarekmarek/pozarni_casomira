@@ -194,11 +194,13 @@ void UtokSmazan();
 void Automaticky();
 void Casomira();
 void najdiNejvyssiID();
-void CtiSD(char Zapis);
+//void CtiSD(char Zapis);
 double CtiV();
+void CtiCSV(byte Field);
 //void ZapisSD(char Zapis, double Terc);
 //void Zapis_C_D(char Zapis, String hodnota);
 void ZapisCSV();
+void SmazatZaznam();
 void battery(char zarizeni);
 void nabijeni();
 void cursor();
@@ -1084,17 +1086,22 @@ void Menu()
       lcd.print("ID");
       lcd.print(ID);
       lcd.print(" ");
-      CtiSD('C');
+      //CtiSD('C');
+      CtiCSV(5);
       lcd.print(" ");
-      CtiSD('D');
+      //CtiSD('D');
+      CtiCSV(4);
       lcd.setCursor(0, 1);
-      CtiSD('V');
+      //CtiSD('V');
+      CtiCSV(1);
       lcd.setCursor(7, 1);
       lcd.print("L:");
-      CtiSD('L');
+      //CtiSD('L');
+      CtiCSV(2);
       lcd.setCursor(7, 2);
       lcd.print("P:");
-      CtiSD('P');
+      //CtiSD('P');
+      CtiCSV(3);
       lcd.setCursor(1, 3);
       lcd.print("Zpet");
       lcd.setCursor(14, 3);
@@ -1387,14 +1394,15 @@ void UtokSmazan()
   lcd.print(" byl");
   lcd.setCursor(3, 2);
   lcd.print("uspesne smazan");
-  if (ID != 0)
+  if (ID != 0) //pokud neni pritomna sd karta
   {
-    SD.remove(String(ID) + "/V.txt");
+    SmazatZaznam();
+    /*SD.remove(String(ID) + "/V.txt");
     SD.remove(String(ID) + "/L.txt");
     SD.remove(String(ID) + "/P.txt");
     SD.remove(String(ID) + "/C.txt");
     SD.remove(String(ID) + "/D.txt");
-    SD.rmdir(String(ID));
+    SD.rmdir(String(ID));*/
     deleteNode();
     najdiNejvyssiID();
     if (predchoziMenu == 5) {
@@ -1410,7 +1418,7 @@ void UtokSmazan()
 }
 
 void najdiNejvyssiID(){
-  numberOfNodes = 0;
+  /*numberOfNodes = 0;
   for (int pomocnaID = 0; pomocnaID < ID_MAX; pomocnaID++)
   {
     if (SD.exists(String(pomocnaID)))
@@ -1419,7 +1427,34 @@ void najdiNejvyssiID(){
       numberOfNodes++;
     }
     NejvyssiID = ID;
+  }*/
+  String teamcsv = String(team) + ".csv";
+  char FILENAME[15];
+  teamcsv.toCharArray(FILENAME,15);
+
+  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
+    Serial.println("Chyba otevreni " + String(team) + ".csv");
   }
+  
+  const byte BUFFER_SIZE = 5;
+  char buffer[BUFFER_SIZE + 1];
+  buffer[BUFFER_SIZE] = '\0';
+
+  int numBuffer = 0;
+    csv.gotoBeginOfFile();
+    do {
+      csv.seekCur(2);
+      csv.readField(numBuffer, buffer, BUFFER_SIZE);
+      Serial.println(numBuffer);
+      if (numBuffer > ID) {
+        ID = numBuffer;
+        numberOfNodes++;
+      }
+    } while(csv.nextLine());
+    //Serial.println(ID);
+    NejvyssiID = ID;
+    
+    csv.close();
 }
 
 void Odpocet()
@@ -1473,7 +1508,7 @@ void Odpocet()
   } while ((minuty != 0) || (sekundy != 0));
 }
 
-void CtiSD(char Zapis)
+/*void CtiSD(char Zapis)
 {
   //Serial.println(ID);
   myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt");
@@ -1492,27 +1527,36 @@ void CtiSD(char Zapis)
   {
     Serial.println("chyba otevreni " + String(Zapis) + ".txt");
   }
-}
+}*/
 
-void CtiCSV(String team, char Zapis)
+void CtiCSV(byte Field)
 {
-  //Serial.println(ID);
-  myFile = SD.open(String(team) + ".csv");
-  if (myFile)
-  {
-    byte read = myFile.read();
-    while (read != 255){
-      lcd.write(read);
-      read = myFile.read();
-      //Serial.print(read);
-    }
+  String teamcsv = String(team) + ".csv";
+  char FILENAME[15];
+  teamcsv.toCharArray(FILENAME,15);
 
-    myFile.close();
+  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
+    Serial.println("Chyba otevreni " + String(team) + ".csv");
   }
-  else
-  {
-    Serial.println("chyba otevreni " + String(team) + ".csv");
+
+  String IDstring = "ID" + String(ID);
+  char IDcsv[6];
+  IDstring.toCharArray(IDcsv, 6);
+
+  csv.gotoLine(IDcsv));
+
+  const byte BUFFER_SIZE = 8;
+  char buffer[BUFFER_SIZE + 1];
+  buffer[BUFFER_SIZE] = '\0';
+
+  for (byte i = 0; i < Field; i++){
+    csv.nextField();
   }
+
+  csv.readField(buffer, BUFFER_SIZE);
+  lcd.print(buffer);
+  
+  csv.close();
 }
 
 double CtiV()
@@ -1652,6 +1696,22 @@ void ZapisCSV()
     Serial.println("error writing to " + String(Zapis) + ".txt");
   }
 }*/
+
+void SmazatZaznam(){
+  String teamcsv = String(team) + ".csv";
+  char FILENAME[15];
+  teamcsv.toCharArray(FILENAME,15);
+
+  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
+    Serial.println("Chyba otevreni " + String(team) + ".csv");
+  }
+  String IDstring = "ID" + String(ID);
+  char IDcsv[6];
+  IDstring.toCharArray(IDcsv, 6);
+  csv.gotoLine(IDcsv);
+  csv.markLineAsDelete();
+  csv.close();
+}
 
 void createLinkedList()
 {
