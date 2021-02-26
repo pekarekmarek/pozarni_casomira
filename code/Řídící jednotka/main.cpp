@@ -1,6 +1,7 @@
 /*
    *        
-   *        rf prijima signal i po odpojeni napajeni?
+   *        rf write utok = true - menu spustit utok // 
+   *        rf write utok = false - menu casomira done
    *        csv
    *        automaticke mazani pokud oba casy > 60s ?
    *        vyber tymu
@@ -13,6 +14,7 @@
 #include <SPI.h>
 #include "SdFat.h"
 #include "RTClib.h"
+#include <CSVFile.h>
 
 #define buzzer 12
 #define batterypin A1
@@ -35,6 +37,11 @@ int stav;
 //
 byte pocetTeamu = 2;
 String team = "";
+/*
+String team1 = "";
+String team2 = "";
+String team3 = "";
+*/
 //bool kurzor = false;
 char znakyMale[2][20] = {{'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t'},
 {'u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','_'}};
@@ -43,9 +50,11 @@ char znakyVelke[2][20] = {{'A','B','C','D','E','F','G','H','I','J','K','L','M','
 bool malepismena = true;
 //
 
-//SD KARTA
-File myFile;
+//  SD KARTA
+//File myFile;
 SdFat SD;
+CSVFile csv;
+
 byte ID = 1;
 #define ID_MAX 255
 byte NejvyssiID = 0;
@@ -187,8 +196,9 @@ void Casomira();
 void najdiNejvyssiID();
 void CtiSD(char Zapis);
 double CtiV();
-void ZapisSD(char Zapis, double Terc);
-void Zapis_C_D(char Zapis, String hodnota);
+//void ZapisSD(char Zapis, double Terc);
+//void Zapis_C_D(char Zapis, String hodnota);
+void ZapisCSV();
 void battery(char zarizeni);
 void nabijeni();
 void cursor();
@@ -1020,7 +1030,7 @@ void Menu()
   break;
   case 2: //Pozarni utok
   {
-    if(HC12.available()){
+    if (HC12.available()){
     lcd.setCursor(0, 0);
     lcd.print("Pozarni utok");
     lcd.setCursor(1, 1);
@@ -1143,12 +1153,13 @@ void Menu()
       Casomira();
       lcd.setCursor(0, 3);
       lcd.print(">");
-      SD.mkdir(String(ID));
-      Zapis_C_D('C', cas);
+      //SD.mkdir(String(ID));
+      /*Zapis_C_D('C', cas);
       Zapis_C_D('D', datum);
       ZapisSD('V', i);
       ZapisSD('L', L);
-      ZapisSD('P', P);
+      ZapisSD('P', P);*/
+      ZapisCSV();
       AddtoList();
       numberOfNodes++;
     }
@@ -1251,9 +1262,9 @@ void Menu()
 
 void Casomira()
 {
-  utok = 1;
-  HC12.write(utok);
-  tone(buzzer, 2100, 500);
+  //utok = 1;
+  //HC12.write(utok);
+  //tone(buzzer, 2100, 500);
   lcd.clear();
   lcd.print("ID");
   a = millis();
@@ -1290,8 +1301,8 @@ void Casomira()
       L = i - RF_DELAY;
       lcd.print(L);
       levy = true;
-      tone(buzzer, 2090, 500);
-      Serial.println(HC12.read());
+      //tone(buzzer, 2090, 500);
+      //Serial.println(HC12.read());
     }
     if ((HC12.read() == 66) && (pravy == false) && (i > 1))
     {
@@ -1300,8 +1311,8 @@ void Casomira()
       P = i - RF_DELAY;
       lcd.print(P);
       pravy = true;
-      tone(buzzer, 2090, 500);
-      Serial.println(HC12.read());
+      //tone(buzzer, 2090, 500);
+      //Serial.println(HC12.read());
     }
   }
   if (i >= CAS_MAX)
@@ -1324,8 +1335,8 @@ void Casomira()
   cas += String(now.minute());
   datum = String(now.day()) + "/" + String(now.month()) + "/" + String(now.year() - 2000);
   UtokDokonceny = true;
-  utok = 0;
-  HC12.write(utok);
+  //utok = 0;
+  //HC12.write(utok);
 }
 
 void Automaticky()
@@ -1583,7 +1594,7 @@ double CtiV()
   return cas;
 }
 
-void ZapisSD(char Zapis, double Terc)
+/*void ZapisSD(char Zapis, double Terc)
 {
   myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt", FILE_WRITE);
   if (myFile)
@@ -1597,32 +1608,37 @@ void ZapisSD(char Zapis, double Terc)
   {
     Serial.println("error writing to " + String(Zapis) + ".txt");
   }
-}
+}*/
 
-void ZapisCSV(String team)
+void ZapisCSV()
 {
-  myFile = SD.open(String(team) + ".csv", FILE_WRITE);
+  String teamcsv = String(team) + ".csv";
+  char FILENAME[15];
+  teamcsv.toCharArray(FILENAME,15);
+
+  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
+    Serial.println("Chyba otevreni " + String(teamcsv));
+  }
   String dataString = "";
-  if (myFile)
-  {
-    dataString = String(ID) + ",";
-    if (i < 10) dataString += "0";
-    dataString += String(i) + ",";
-    if (L < 10) dataString += "0";
-    dataString += String(L) + ",";
-    if (P < 10) dataString += "0";
-    dataString += String(P) + "," + String(datum) + "," + String(cas);
-    myFile.println(dataString);
-    myFile.close();
-    Serial.println("writing done to " + String(team) + ".csv");
-  }
-  else
-  {
-    Serial.println("error writing to " + String(team) + ".csv");
-  }
+  char data[50];
+  do {
+    csv.nextLine();
+  } while (csv.nextLine());
+  csv.addLine();
+  dataString = "ID" + String(ID) + ",";
+  if (i < 10) dataString += "0";
+  dataString += String(i) + ",";
+  if (L < 10) dataString += "0";
+  dataString += String(L) + ",";
+  if (P < 10) dataString += "0";
+  dataString += String(P) + "," + String(datum) + "," + String(cas);
+  dataString.toCharArray(data, 50);
+
+  csv.write(data);
+  csv.close();
 }
 
-void Zapis_C_D(char Zapis, String hodnota)
+/*void Zapis_C_D(char Zapis, String hodnota)
 {
   myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt", FILE_WRITE);
   if (myFile)
@@ -1635,7 +1651,7 @@ void Zapis_C_D(char Zapis, String hodnota)
   {
     Serial.println("error writing to " + String(Zapis) + ".txt");
   }
-}
+}*/
 
 void createLinkedList()
 {
