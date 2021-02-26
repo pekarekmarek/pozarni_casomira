@@ -1543,7 +1543,7 @@ void CtiCSV(byte Field)
   char IDcsv[6];
   IDstring.toCharArray(IDcsv, 6);
 
-  csv.gotoLine(IDcsv));
+  csv.gotoLine(IDcsv);
 
   const byte BUFFER_SIZE = 8;
   char buffer[BUFFER_SIZE + 1];
@@ -1741,6 +1741,80 @@ void createLinkedList()
   struct node *newNode;
   double nodeData;
 
+  String teamcsv = String(team) + ".csv";
+  char FILENAME[15];
+  teamcsv.toCharArray(FILENAME,15);
+  
+  const byte BUFFER_SIZE = 5;
+  char buffer[BUFFER_SIZE + 1];
+  buffer[BUFFER_SIZE] = '\0';
+  int numBuffer = 0;
+  int lastNumBuffer = 0;
+
+  firstNode = (struct node *)malloc(sizeof(struct node));
+
+  if (firstNode == NULL)
+  {
+    Serial.println("Memory cannot be allocated");
+  }
+  else
+  {
+    if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
+      Serial.println("Chyba otevreni " + String(team) + ".csv");
+    }
+    csv.gotoBeginOfFile();
+    csv.seekCur(2);
+    csv.readField(numBuffer, buffer, BUFFER_SIZE);
+    ID = numBuffer;
+    lastNumBuffer = numBuffer;
+    Serial.println(numBuffer);
+    csv.close();
+    nodeData = CtiV();
+    Serial.println(nodeData);
+    firstNode->data = nodeData;
+    firstNode->prevPtr = NULL;
+    firstNode->nextPtr = NULL;
+    firstNode->ID_Ptr = ID;
+
+    lastNode = firstNode;
+    do {
+      if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
+        Serial.println("Chyba otevreni " + String(team) + ".csv");
+      }
+      do {
+        csv.nextLine();
+        csv.seekCur(2);
+        csv.readField(numBuffer, buffer, BUFFER_SIZE);
+      } while (numBuffer <= lastNumBuffer);
+      Serial.println(numBuffer);
+      ID = numBuffer;
+      lastNumBuffer = numBuffer;
+      csv.close();
+      newNode = (struct node *)malloc(sizeof(struct node));
+      if (newNode == NULL){
+        Serial.println("Memory cannot be allocated");
+      }
+      else {
+        nodeData = CtiV();
+        Serial.println(nodeData);
+        newNode->data = nodeData;
+        newNode->ID_Ptr = ID;
+        newNode->nextPtr = NULL;
+        newNode->prevPtr = NULL;
+
+        newNode->prevPtr = lastNode;
+        lastNode->nextPtr = newNode;
+
+        lastNode = newNode;
+
+      } 
+    } while(csv.nextLine());
+    Serial.println("List created.");
+    //csv.close();
+  }
+  /*struct node *newNode;
+  double nodeData;
+
   firstNode = (struct node *)malloc(sizeof(struct node));
 
   if (firstNode == NULL)
@@ -1783,7 +1857,7 @@ void createLinkedList()
         }
       }
   }
-  Serial.println("List created.");
+  Serial.println("List created.");*/
 }
 
 void AddtoList(){
