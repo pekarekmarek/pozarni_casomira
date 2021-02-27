@@ -195,6 +195,7 @@ void Automaticky();
 void Casomira();
 void najdiNejvyssiID();
 //void CtiSD(char Zapis);
+void OpenCSV();
 double CtiV();
 void CtiCSV(byte Field);
 //void ZapisSD(char Zapis, double Terc);
@@ -1385,6 +1386,16 @@ void VypisMenu()
   }  
 }
 
+void OpenCSV(){
+  String teamcsv = String(team) + ".csv";
+  char FILENAME[15];
+  teamcsv.toCharArray(FILENAME,15);
+
+  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
+    Serial.println("Chyba otevreni " + String(team) + ".csv");
+  }
+}
+
 void UtokSmazan()
 {
   lcd.clear();
@@ -1428,13 +1439,11 @@ void najdiNejvyssiID(){
     }
     NejvyssiID = ID;
   }*/
-  String teamcsv = String(team) + ".csv";
-  char FILENAME[15];
-  teamcsv.toCharArray(FILENAME,15);
 
-  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
-    Serial.println("Chyba otevreni " + String(team) + ".csv");
-  }
+  numberOfNodes = 0;
+  ID = 0;
+
+  OpenCSV();
   
   const byte BUFFER_SIZE = 5;
   char buffer[BUFFER_SIZE + 1];
@@ -1445,7 +1454,7 @@ void najdiNejvyssiID(){
     do {
       csv.seekCur(2);
       csv.readField(numBuffer, buffer, BUFFER_SIZE);
-      Serial.println(numBuffer);
+      //Serial.println(numBuffer);
       if (numBuffer > ID) {
         ID = numBuffer;
         numberOfNodes++;
@@ -1531,13 +1540,7 @@ void Odpocet()
 
 void CtiCSV(byte Field)
 {
-  String teamcsv = String(team) + ".csv";
-  char FILENAME[15];
-  teamcsv.toCharArray(FILENAME,15);
-
-  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
-    Serial.println("Chyba otevreni " + String(team) + ".csv");
-  }
+  OpenCSV();
 
   String IDstring = "ID" + String(ID);
   char IDcsv[6];
@@ -1561,88 +1564,7 @@ void CtiCSV(byte Field)
 
 double CtiV()
 {
-  
-  /*double cas = 0;
-  float x = 10.0;
-  byte read;
-  myFile = SD.open(String(ID) + "/V.txt");
-  if (myFile)
-  {
-    for (byte data = 0; data < 5; data++)
-    {
-      read = myFile.read();
-        switch (read)
-        {
-        case 48:
-        {
-          cas += x * 0;
-        }
-        break;
-        case 49:
-        {
-          cas += x * 1;
-        }
-        break;
-        case 50:
-        {
-          cas += x * 2;
-        }
-        break;
-        case 51:
-        {
-          cas += x * 3;
-        }
-        break;
-        case 52:
-        {
-          cas += x * 4;
-        }
-        break;
-        case 53:
-        {
-          cas += x * 5;
-        }
-        break;
-        case 54:
-        {
-          cas += x * 6;
-        }
-        break;
-        case 55:
-        {
-          cas += x * 7;
-        }
-        break;
-        case 56:
-        {
-          cas += x * 8;
-        }
-        break;
-        case 57:
-        {
-          cas += x * 9;
-        }
-        break;
-        }
-        //Serial.println(read);
-        if (read != 46)
-          x = x / 10;
-    }
-      
-    myFile.close();
-  }
-  else
-  {
-    Serial.println("chyba otevreni V.txt");
-  }
-  return cas;*/
-  String teamcsv = String(team) + ".csv";
-  char FILENAME[15];
-  teamcsv.toCharArray(FILENAME,15);
-
-  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
-    Serial.println("Chyba otevreni " + String(team) + ".csv");
-  }
+  csv.gotoBeginOfFile();
   String IDstring = "ID" + String(ID);
   char IDcsv[6];
   IDstring.toCharArray(IDcsv, 5);
@@ -1657,7 +1579,6 @@ double CtiV()
   String stringBuffer = buffer;
 
   double cas = stringBuffer.toDouble();
-  csv.close();
   return cas;
 }
 
@@ -1679,13 +1600,7 @@ double CtiV()
 
 void ZapisCSV()
 {
-  String teamcsv = String(team) + ".csv";
-  char FILENAME[15];
-  teamcsv.toCharArray(FILENAME,15);
-
-  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
-    Serial.println("Chyba otevreni " + String(teamcsv));
-  }
+  OpenCSV();
   String dataString = "";
   char data[50];
   do {
@@ -1721,18 +1636,15 @@ void ZapisCSV()
 }*/
 
 void SmazatZaznam(){
-  String teamcsv = String(team) + ".csv";
-  char FILENAME[15];
-  teamcsv.toCharArray(FILENAME,15);
-
-  if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
-    Serial.println("Chyba otevreni " + String(team) + ".csv");
-  }
+  OpenCSV();
   String IDstring = "ID" + String(ID);
   char IDcsv[6];
   IDstring.toCharArray(IDcsv, 6);
+  csv.gotoBeginOfFile();
   csv.gotoLine(IDcsv);
   csv.markLineAsDelete();
+  Serial.print("Smazan ");
+  Serial.println(IDcsv);
   csv.close();
 }
 
@@ -1741,9 +1653,7 @@ void createLinkedList()
   struct node *newNode;
   double nodeData;
 
-  String teamcsv = String(team) + ".csv";
-  char FILENAME[15];
-  teamcsv.toCharArray(FILENAME,15);
+  OpenCSV();
   
   const byte BUFFER_SIZE = 5;
   char buffer[BUFFER_SIZE + 1];
@@ -1759,18 +1669,17 @@ void createLinkedList()
   }
   else
   {
-    if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
-      Serial.println("Chyba otevreni " + String(team) + ".csv");
-    }
     csv.gotoBeginOfFile();
-    csv.seekCur(2);
-    csv.readField(numBuffer, buffer, BUFFER_SIZE);
+    do {
+      csv.seekCur(2);
+      csv.readField(numBuffer, buffer, BUFFER_SIZE);
+      if (numBuffer == 0) csv.nextLine();
+    } while (numBuffer == 0);
     ID = numBuffer;
     lastNumBuffer = numBuffer;
-    Serial.println(numBuffer);
-    csv.close();
+    //Serial.println(numBuffer);
     nodeData = CtiV();
-    Serial.println(nodeData);
+    //Serial.println(nodeData);
     firstNode->data = nodeData;
     firstNode->prevPtr = NULL;
     firstNode->nextPtr = NULL;
@@ -1778,25 +1687,21 @@ void createLinkedList()
 
     lastNode = firstNode;
     do {
-      if (!csv.open(FILENAME, O_RDWR | O_CREAT)){
-        Serial.println("Chyba otevreni " + String(team) + ".csv");
-      }
       do {
         csv.nextLine();
         csv.seekCur(2);
         csv.readField(numBuffer, buffer, BUFFER_SIZE);
       } while (numBuffer <= lastNumBuffer);
-      Serial.println(numBuffer);
+      //Serial.println(numBuffer);
       ID = numBuffer;
       lastNumBuffer = numBuffer;
-      csv.close();
       newNode = (struct node *)malloc(sizeof(struct node));
       if (newNode == NULL){
         Serial.println("Memory cannot be allocated");
       }
       else {
         nodeData = CtiV();
-        Serial.println(nodeData);
+        //Serial.println(nodeData);
         newNode->data = nodeData;
         newNode->ID_Ptr = ID;
         newNode->nextPtr = NULL;
@@ -1810,7 +1715,7 @@ void createLinkedList()
       } 
     } while(csv.nextLine());
     Serial.println("List created.");
-    //csv.close();
+    csv.close();
   }
   /*struct node *newNode;
   double nodeData;
@@ -1868,7 +1773,9 @@ void AddtoList(){
     Serial.println("Memory cannot be allocated");
   }
   else {
+    OpenCSV();
     nodeData = CtiV();
+    csv.close();
     Serial.println("Added to list:");
     Serial.println(nodeData);
     newNode->data = nodeData;
