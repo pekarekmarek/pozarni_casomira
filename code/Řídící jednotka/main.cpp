@@ -196,6 +196,7 @@ void Casomira();
 void najdiNejvyssiID();
 //void CtiSD(char Zapis);
 void OpenCSV();
+void VypisCSV();
 double CtiV();
 void CtiCSV(byte Field);
 //void ZapisSD(char Zapis, double Terc);
@@ -258,10 +259,10 @@ void setup()
   pinMode(buzzer, OUTPUT);
   pinMode(batterypin, INPUT);
   pinMode(nabijenipin, INPUT);
-  createLinkedList();
+  /*createLinkedList();
   sortNejrychlejsi(numberOfNodes);
   currentNode = firstNode;
-  najdiNejvyssiID();
+  najdiNejvyssiID();*/
   lcd.clear();
 }
 
@@ -307,7 +308,7 @@ void loop()
             {
             case 0:
             {
-              team = "team1";
+              team = "testing";
             }
             break;
             case 1:
@@ -331,6 +332,12 @@ void loop()
               menu = 1;
               moznost = 0;
             }
+            najdiNejvyssiID();
+            VypisCSV();
+            createLinkedList();
+            sortNejrychlejsi(numberOfNodes);
+            currentNode = firstNode;
+            
           }
         }
         break;
@@ -1170,6 +1177,7 @@ void Menu()
       ZapisCSV();
       AddtoList();
       numberOfNodes++;
+      VypisCSV();
     }
     
     lcd.setCursor(0, 0);
@@ -1378,7 +1386,7 @@ void VypisMenu()
     lcd.setCursor(18,1);
     lcd.print("T");
     if (HC12.available()) {battery('T');
-      Serial.println(HC12.read());
+      //Serial.println(HC12.read());
     }
     else {lcd.print("X");
       //Serial.println("No radio");
@@ -1460,7 +1468,10 @@ void najdiNejvyssiID(){
         numberOfNodes++;
       }
     } while(csv.nextLine());
-    //Serial.println(ID);
+    Serial.print("Number of nodes: ");
+    Serial.println(numberOfNodes);
+    Serial.print("Nejvyssi ID: ");
+    Serial.println(ID);
     NejvyssiID = ID;
     
     csv.close();
@@ -1517,6 +1528,26 @@ void Odpocet()
   } while ((minuty != 0) || (sekundy != 0));
 }
 
+void VypisCSV(){
+  OpenCSV();
+
+  const byte BUFFER_SIZE = 8;
+  char buffer[BUFFER_SIZE + 1];
+  buffer[BUFFER_SIZE] = '\0';
+
+  csv.gotoBeginOfFile();
+  do {
+    csv.readField(buffer, BUFFER_SIZE);
+    Serial.print(buffer); Serial.print(',');
+    csv.nextField();
+    if (csv.isEndOfLine()) {
+      csv.nextLine();
+      Serial.print("\n");
+    }
+  } while (!csv.isEndOfFile());
+  csv.close();
+}
+
 /*void CtiSD(char Zapis)
 {
   //Serial.println(ID);
@@ -1545,7 +1576,7 @@ void CtiCSV(byte Field)
   String IDstring = "ID" + String(ID);
   char IDcsv[6];
   IDstring.toCharArray(IDcsv, 6);
-
+  csv.gotoBeginOfFile();
   csv.gotoLine(IDcsv);
 
   const byte BUFFER_SIZE = 8;
@@ -1558,6 +1589,7 @@ void CtiCSV(byte Field)
 
   csv.readField(buffer, BUFFER_SIZE);
   lcd.print(buffer);
+  //Serial.println(buffer);
   
   csv.close();
 }
@@ -1567,7 +1599,7 @@ double CtiV()
   csv.gotoBeginOfFile();
   String IDstring = "ID" + String(ID);
   char IDcsv[6];
-  IDstring.toCharArray(IDcsv, 5);
+  IDstring.toCharArray(IDcsv, 6);
   csv.gotoLine(IDcsv);
   const byte BUFFER_SIZE = 8;
   char buffer[BUFFER_SIZE + 1];
@@ -1646,6 +1678,7 @@ void SmazatZaznam(){
   Serial.print("Smazan ");
   Serial.println(IDcsv);
   csv.close();
+  VypisCSV();
 }
 
 void createLinkedList()
@@ -1663,9 +1696,9 @@ void createLinkedList()
 
   firstNode = (struct node *)malloc(sizeof(struct node));
 
-  if (firstNode == NULL)
+  if (firstNode == NULL || numberOfNodes == 0)
   {
-    Serial.println("Memory cannot be allocated");
+    Serial.println("Zadny zaznam");
   }
   else
   {
@@ -1673,50 +1706,57 @@ void createLinkedList()
     do {
       csv.seekCur(2);
       csv.readField(numBuffer, buffer, BUFFER_SIZE);
+      Serial.println("1");
       if (numBuffer == 0) csv.nextLine();
     } while (numBuffer == 0);
     ID = numBuffer;
     lastNumBuffer = numBuffer;
-    //Serial.println(numBuffer);
+    Serial.println(numBuffer);
     nodeData = CtiV();
-    //Serial.println(nodeData);
+    Serial.println(nodeData);
     firstNode->data = nodeData;
     firstNode->prevPtr = NULL;
     firstNode->nextPtr = NULL;
     firstNode->ID_Ptr = ID;
 
     lastNode = firstNode;
-    do {
+    if (numberOfNodes > 1 ){
       do {
-        csv.nextLine();
-        csv.seekCur(2);
-        csv.readField(numBuffer, buffer, BUFFER_SIZE);
-      } while (numBuffer <= lastNumBuffer);
-      //Serial.println(numBuffer);
-      ID = numBuffer;
-      lastNumBuffer = numBuffer;
-      newNode = (struct node *)malloc(sizeof(struct node));
-      if (newNode == NULL){
-        Serial.println("Memory cannot be allocated");
-      }
-      else {
-        nodeData = CtiV();
-        //Serial.println(nodeData);
-        newNode->data = nodeData;
-        newNode->ID_Ptr = ID;
-        newNode->nextPtr = NULL;
-        newNode->prevPtr = NULL;
+        Serial.println("2");
+        csv.gotoBeginOfFile();
+        do {
+          csv.nextLine();
+          csv.seekCur(2);
+          csv.readField(numBuffer, buffer, BUFFER_SIZE);
+        } while (numBuffer <= lastNumBuffer);
+        Serial.println("3");
+        Serial.println(numBuffer);
+        ID = numBuffer;
+        lastNumBuffer = numBuffer;
+        newNode = (struct node *)malloc(sizeof(struct node));
+        if (newNode == NULL){
+          Serial.println("Memory cannot be allocated");
+        }
+        else {
+          nodeData = CtiV();
+          Serial.println(nodeData);
+          newNode->data = nodeData;
+          newNode->ID_Ptr = ID;
+          newNode->nextPtr = NULL;
+          newNode->prevPtr = NULL;
 
-        newNode->prevPtr = lastNode;
-        lastNode->nextPtr = newNode;
+          newNode->prevPtr = lastNode;
+          lastNode->nextPtr = newNode;
 
-        lastNode = newNode;
+          lastNode = newNode;
 
-      } 
-    } while(csv.nextLine());
+        } 
+      } while(csv.nextLine());
+    }
     Serial.println("List created.");
-    csv.close();
   }
+  csv.close();
+  VypisCSV();
   /*struct node *newNode;
   double nodeData;
 
@@ -1942,10 +1982,10 @@ void battery(char zarizeni){
     else stav = 7;
   }
   else if (zarizeni == 'T') {
-    if (millis() - pomocna >= 500){
+    //if (millis() - pomocna >= 500){
       pomocna = millis();
       stav = HC12.read();
-    }
+    //}
   }
   if (stav == 8) nabijeni();
   else lcd.write(byte(stav));
