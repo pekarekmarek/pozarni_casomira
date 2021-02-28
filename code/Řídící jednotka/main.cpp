@@ -2,7 +2,7 @@
    *        
    *        rf write utok = true - menu spustit utok // 
    *        rf write utok = false - menu casomira done
-   *        csv
+   *        csv - otestovat
    *        automaticke mazani pokud oba casy > 60s ?
    *        vyber tymu
    *        
@@ -35,13 +35,13 @@ byte sekundy = 0;
 int stav;
 
 //
-byte pocetTeamu = 2;
+byte pocetTeamu = 0;
+String nazevteamu = "";
 String team = "";
-/*
 String team1 = "";
 String team2 = "";
 String team3 = "";
-*/
+
 //bool kurzor = false;
 char znakyMale[2][20] = {{'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t'},
 {'u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','_'}};
@@ -53,6 +53,7 @@ bool malepismena = true;
 //  SD KARTA
 //File myFile;
 SdFat SD;
+File root;
 CSVFile csv;
 
 byte ID = 1;
@@ -188,7 +189,7 @@ void Sipka()
   lcd.setCursor(x, moznost);
   lcd.print(">");
 }
-void VypisMenu();
+void IndikaceBaterie();
 void Odpocet();
 void UtokSmazan();
 void Automaticky();
@@ -206,6 +207,7 @@ void SmazatZaznam();
 void battery(char zarizeni);
 void nabijeni();
 void cursor();
+void NacistTymy();
 
 void setup()
 {
@@ -259,17 +261,20 @@ void setup()
   pinMode(buzzer, OUTPUT);
   pinMode(batterypin, INPUT);
   pinMode(nabijenipin, INPUT);
+  NacistTymy();
+  if (pocetTeamu == 0) menu = 1;
   /*createLinkedList();
   sortNejrychlejsi(numberOfNodes);
   currentNode = firstNode;
   najdiNejvyssiID();*/
   lcd.clear();
+
 }
 
 void loop()
 {
   //if (menu == 12) cursor();
-  VypisMenu();
+  IndikaceBaterie();
   for (byte i = 0; i < 3; i++)
   {
     byte reading = digitalRead(pinyTlacitek[i]);
@@ -301,24 +306,24 @@ void loop()
         case 0: // vyber teamu
         {
           
-          if (millis() > 8000)
+          if (millis() > 5000)
           {
             Serial.println(menu);
             switch (moznost)
             {
             case 0:
             {
-              team = "testing";
+              team = team1;
             }
             break;
             case 1:
             {
-              team = "team2";
+              team = team2;
             }
             break;
             case 2:
             {
-              team = "team3";
+              team = team3;
             }
             break;
             case 3: //novy team
@@ -344,7 +349,7 @@ void loop()
         case 1: // Hlavni menu
         {
           
-          if (millis() > 8000)
+          if (millis() > 5000)
           {
             Serial.println(menu);
             switch (moznost)
@@ -672,7 +677,9 @@ void loop()
             {
               menu = 0;
               moznost = pocetTeamu - 1; //
-              //create sd
+              OpenCSV();
+              csv.close();
+              NacistTymy();
             }
             break;
             case 11:
@@ -1012,9 +1019,15 @@ void Menu()
   {
 
     lcd.setCursor(1, 0);
-    lcd.print("tym1");
-    lcd.setCursor(1, 1);
-    lcd.print("tym2");
+    lcd.print(team1);
+    if (pocetTeamu > 1) {
+      lcd.setCursor(1, 1);
+      lcd.print(team2);
+      if (pocetTeamu == 3){
+        lcd.setCursor(1, 2);
+        lcd.print(team3);
+      }
+    }
     lcd.setCursor(1,3);
     lcd.print("Novy team");
     /*lcd.home();
@@ -1376,7 +1389,7 @@ void Automaticky()
   //bzucak;
 }
 
-void VypisMenu()
+void IndikaceBaterie()
 {
   if (menu != 12) {
     lcd.setCursor(18,0);
@@ -1416,12 +1429,6 @@ void UtokSmazan()
   if (ID != 0) //pokud neni pritomna sd karta
   {
     SmazatZaznam();
-    /*SD.remove(String(ID) + "/V.txt");
-    SD.remove(String(ID) + "/L.txt");
-    SD.remove(String(ID) + "/P.txt");
-    SD.remove(String(ID) + "/C.txt");
-    SD.remove(String(ID) + "/D.txt");
-    SD.rmdir(String(ID));*/
     deleteNode();
     najdiNejvyssiID();
     if (predchoziMenu == 5) {
@@ -1437,17 +1444,6 @@ void UtokSmazan()
 }
 
 void najdiNejvyssiID(){
-  /*numberOfNodes = 0;
-  for (int pomocnaID = 0; pomocnaID < ID_MAX; pomocnaID++)
-  {
-    if (SD.exists(String(pomocnaID)))
-    {
-      ID = pomocnaID;
-      numberOfNodes++;
-    }
-    NejvyssiID = ID;
-  }*/
-
   numberOfNodes = 0;
   ID = 0;
 
@@ -2013,3 +2009,34 @@ void nabijeni(){
   }
 }
 
+void NacistTymy() {
+  root = SD.open("/");
+  char FileName[20];
+  pocetTeamu = 0;
+  String nazevteamu = "";
+  while (true) {
+    File entry =  root.openNextFile();
+    if (! entry) {
+      break;
+    }
+    if (entry.isFile()) {
+      entry.getName(FileName, 20);
+      if ((strstr(FileName, ".csv") != NULL) && pocetTeamu < 3){
+        //Serial.println(FileName);
+        pocetTeamu++;
+        nazevteamu = FileName;
+        nazevteamu.remove(nazevteamu.length() - 4,4);
+        //Serial.println(nazevteamu);
+        if (pocetTeamu == 1) team1 = nazevteamu;
+        else if (pocetTeamu == 2) team2 = nazevteamu;
+        else team3 = nazevteamu;
+      }
+      
+    }
+    entry.close();
+  }
+  Serial.print("Team1: ");Serial.println(team1);
+  Serial.print("Team2: ");Serial.println(team2);
+  Serial.print("Team3: ");Serial.println(team3);
+  Serial.print("Pocet teamu: ");Serial.println(pocetTeamu);
+}
