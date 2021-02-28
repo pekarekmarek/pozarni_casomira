@@ -340,7 +340,7 @@ void loop()
               najdiNejvyssiID();
               VypisCSV();
               createLinkedList();
-              sortNejrychlejsi(numberOfNodes);
+              //sortNejrychlejsi(numberOfNodes);
               currentNode = firstNode;
             }
           }
@@ -1064,7 +1064,6 @@ void Menu()
   break;
   case 2: //Pozarni utok
   {
-    if (HC12.available()){
     lcd.setCursor(0, 0);
     lcd.print("Pozarni utok");
     lcd.setCursor(1, 1);
@@ -1073,13 +1072,6 @@ void Menu()
     lcd.print("Manualne");
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
-    }
-    else {
-      lcd.clear();
-      lcd.setCursor(1,1);
-      lcd.print("Zapni terce");
-    }
-   
   }
   break;
   case 3: //Priprava
@@ -1238,7 +1230,7 @@ void Menu()
     lcd.setCursor(0, 1);
     lcd.print("Zapni terce");
     lcd.setCursor(1, 3);
-    lcd.print("Zpet");
+    lcd.print("Ok");
   }
   break;
   case 11: //Sd karta
@@ -1653,12 +1645,12 @@ void createLinkedList()
     do {
       csv.seekCur(2);
       csv.readField(numBuffer, buffer, BUFFER_SIZE);
-      Serial.println("1");
       if (numBuffer == 0) csv.nextLine();
     } while (numBuffer == 0);
     ID = numBuffer;
     lastNumBuffer = numBuffer;
-    Serial.println(numBuffer);
+    Serial.print(numBuffer);
+    Serial.print("-");
     nodeData = CtiV();
     Serial.println(nodeData);
     firstNode->data = nodeData;
@@ -1669,15 +1661,14 @@ void createLinkedList()
     lastNode = firstNode;
     if (numberOfNodes > 1 ){
       do {
-        Serial.println("2");
         csv.gotoBeginOfFile();
         do {
           csv.nextLine();
           csv.seekCur(2);
           csv.readField(numBuffer, buffer, BUFFER_SIZE);
         } while (numBuffer <= lastNumBuffer);
-        Serial.println("3");
-        Serial.println(numBuffer);
+        Serial.print(numBuffer);
+        Serial.print("-");
         ID = numBuffer;
         lastNumBuffer = numBuffer;
         newNode = (struct node *)malloc(sizeof(struct node));
@@ -1700,56 +1691,10 @@ void createLinkedList()
         } 
       } while(csv.nextLine());
     }
-    Serial.println("List created.");
   }
+  Serial.println("List created.");
   csv.close();
   VypisCSV();
-  /*struct node *newNode;
-  double nodeData;
-
-  firstNode = (struct node *)malloc(sizeof(struct node));
-
-  if (firstNode == NULL)
-  {
-    Serial.println("Memory cannot be allocated");
-  }
-  else
-  {
-    ID = 1;
-    nodeData = CtiV();
-    //Serial.println(nodeData);
-    firstNode->data = nodeData;
-    firstNode->prevPtr = NULL;
-    firstNode->nextPtr = NULL;
-    firstNode->ID_Ptr = ID;
-
-    lastNode = firstNode;
-      for (ID = 2; ID < ID_MAX; ID++)
-      {
-        if (SD.exists(String(ID)))
-        {
-          newNode = (struct node *)malloc(sizeof(struct node));
-          if (newNode == NULL){
-            Serial.println("Memory cannot be allocated");
-          }
-          else {
-            nodeData = CtiV();
-            //Serial.println(nodeData);
-            newNode->data = nodeData;
-            newNode->ID_Ptr = ID;
-            newNode->nextPtr = NULL;
-            newNode->prevPtr = NULL;
-
-            newNode->prevPtr = lastNode;
-            lastNode->nextPtr = newNode;
-
-            lastNode = newNode;
-
-          }  
-        }
-      }
-  }
-  Serial.println("List created.");*/
 }
 
 void AddtoList(){
