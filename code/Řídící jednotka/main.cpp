@@ -1,5 +1,6 @@
 /*
    *        
+   *        battery T jen kdyz new != last
    *        rf write utok = true - menu spustit utok // 
    *        rf write utok = false - menu casomira done
    *        csv - otestovat
@@ -308,7 +309,7 @@ void loop()
           
           if (millis() > 5000)
           {
-            Serial.println(menu);
+            //Serial.println(menu);
             switch (moznost)
             {
             case 0:
@@ -336,13 +337,12 @@ void loop()
             if (moznost != 3) {
               menu = 1;
               moznost = 0;
+              najdiNejvyssiID();
+              VypisCSV();
+              createLinkedList();
+              sortNejrychlejsi(numberOfNodes);
+              currentNode = firstNode;
             }
-            najdiNejvyssiID();
-            VypisCSV();
-            createLinkedList();
-            sortNejrychlejsi(numberOfNodes);
-            currentNode = firstNode;
-            
           }
         }
         break;
@@ -351,7 +351,7 @@ void loop()
           
           if (millis() > 5000)
           {
-            Serial.println(menu);
+            //Serial.println(menu);
             switch (moznost)
             {
             case 0:
@@ -636,8 +636,19 @@ void loop()
         break;
         case 10: // RF
         {
+          if (HC12.available()){
+            if (SD.begin(53)) {
+              menu = 2;
+              moznost = 1;
+              ID = NejvyssiID;  
+            } else {
+              menu = 11;
+              moznost = 3;
+            }
+          } else {
           menu = 1;
           moznost = 0;
+          }
         }
         break;
         case 11: // SD
@@ -1012,7 +1023,7 @@ void loop()
 
 void Menu()
 {
-  Serial.println(menu);
+  //Serial.println(menu);
   switch (menu)
   {
   case 0: // Vyber tymu
@@ -1101,7 +1112,7 @@ void Menu()
   case 5: //Nejrychlejsi sestriky
   {
 
-    if (ID != 0) {
+    if (numberOfNodes != 0) {
       ID = currentNode->ID_Ptr;
       lcd.setCursor(0, 0);
       lcd.print("ID");
@@ -1145,7 +1156,6 @@ void Menu()
   break;
   case 6: //Automaticky
   {
-
     UtokDokonceny = false;
     lcd.setCursor(0, 0);
     lcd.print("Automaticky");
@@ -1157,7 +1167,6 @@ void Menu()
   break;
   case 7: //Manualne
   {
-
     manualne = false;
     UtokDokonceny = false;
     lcd.setCursor(0, 0);
@@ -1181,12 +1190,6 @@ void Menu()
       Casomira();
       lcd.setCursor(0, 3);
       lcd.print(">");
-      //SD.mkdir(String(ID));
-      /*Zapis_C_D('C', cas);
-      Zapis_C_D('D', datum);
-      ZapisSD('V', i);
-      ZapisSD('L', L);
-      ZapisSD('P', P);*/
       ZapisCSV();
       AddtoList();
       numberOfNodes++;
@@ -1233,7 +1236,7 @@ void Menu()
   case 10: //RF
   {
     lcd.setCursor(0, 1);
-    lcd.print("Zkontrolujte terce");
+    lcd.print("Zapni terce");
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
   }
@@ -1544,27 +1547,6 @@ void VypisCSV(){
   csv.close();
 }
 
-/*void CtiSD(char Zapis)
-{
-  //Serial.println(ID);
-  myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt");
-  if (myFile)
-  {
-    byte read = myFile.read();
-    while (read != 255){
-      lcd.write(read);
-      read = myFile.read();
-      //Serial.print(read);
-    }
-
-    myFile.close();
-  }
-  else
-  {
-    Serial.println("chyba otevreni " + String(Zapis) + ".txt");
-  }
-}*/
-
 void CtiCSV(byte Field)
 {
   OpenCSV();
@@ -1610,22 +1592,6 @@ double CtiV()
   return cas;
 }
 
-/*void ZapisSD(char Zapis, double Terc)
-{
-  myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt", FILE_WRITE);
-  if (myFile)
-  {
-    if(Terc < 10) myFile.print("0");
-    myFile.print(Terc);
-    myFile.close();
-    Serial.println("writing done.");
-  }
-  else
-  {
-    Serial.println("error writing to " + String(Zapis) + ".txt");
-  }
-}*/
-
 void ZapisCSV()
 {
   OpenCSV();
@@ -1647,21 +1613,6 @@ void ZapisCSV()
   csv.write(data);
   csv.close();
 }
-
-/*void Zapis_C_D(char Zapis, String hodnota)
-{
-  myFile = SD.open(String(ID) + "/" + String(Zapis) + ".txt", FILE_WRITE);
-  if (myFile)
-  {
-    myFile.print(hodnota);
-    myFile.close();
-    Serial.println("writing done.");
-  }
-  else
-  {
-    Serial.println("error writing to " + String(Zapis) + ".txt");
-  }
-}*/
 
 void SmazatZaznam(){
   OpenCSV();
@@ -1812,7 +1763,7 @@ void AddtoList(){
     OpenCSV();
     nodeData = CtiV();
     csv.close();
-    Serial.println("Added to list:");
+    Serial.print("Added to list: ");
     Serial.println(nodeData);
     newNode->data = nodeData;
     newNode->ID_Ptr = ID;
@@ -1830,68 +1781,72 @@ void AddtoList(){
 
 void sortNejrychlejsi(int numberOfNodes)
 {
-  int nodeCtr;
-  int ctr;
-  double nodeDataCopy;
-  byte nodeIDCopy;
-  struct node *currentNode;
-  struct node *nextNode;
+  if (numberOfNodes > 1){
+    int nodeCtr;
+    int ctr;
+    double nodeDataCopy;
+    byte nodeIDCopy;
+    struct node *currentNode;
+    struct node *nextNode;
 
-  for (nodeCtr = numberOfNodes - 2; nodeCtr >= 0; nodeCtr--)
-  {
-    currentNode = firstNode;
-    nextNode = currentNode->nextPtr;
-
-    for (ctr = 0; ctr <= nodeCtr; ctr++)
+    for (nodeCtr = numberOfNodes - 2; nodeCtr >= 0; nodeCtr--)
     {
-      if (currentNode->data > nextNode->data)
-      {
-        nodeDataCopy = currentNode->data;
-        nodeIDCopy = currentNode->ID_Ptr;
-        currentNode->data = nextNode->data;
-        currentNode->ID_Ptr = nextNode->ID_Ptr;
-        nextNode->data = nodeDataCopy;
-        nextNode->ID_Ptr = nodeIDCopy;
-      }
+      currentNode = firstNode;
+      nextNode = currentNode->nextPtr;
 
-      currentNode = nextNode;
-      nextNode = nextNode->nextPtr;
+      for (ctr = 0; ctr <= nodeCtr; ctr++)
+      {
+        if (currentNode->data > nextNode->data)
+        {
+          nodeDataCopy = currentNode->data;
+          nodeIDCopy = currentNode->ID_Ptr;
+          currentNode->data = nextNode->data;
+          currentNode->ID_Ptr = nextNode->ID_Ptr;
+          nextNode->data = nodeDataCopy;
+          nextNode->ID_Ptr = nodeIDCopy;
+        }
+
+        currentNode = nextNode;
+        nextNode = nextNode->nextPtr;
+      }
     }
-  }
-  Serial.println("List sorted - Nejrychlejsi.");
+    Serial.println("List sorted - Nejrychlejsi.");
+  } 
 }
 
 void sortID(int numberOfNodes)
 {
-  int nodeCtr;
-  int ctr;
-  double nodeDataCopy;
-  byte nodeIDCopy;
-  struct node *currentNode;
-  struct node *nextNode;
+  if (numberOfNodes > 1) {
+    int nodeCtr;
+    int ctr;
+    double nodeDataCopy;
+    byte nodeIDCopy;
+    struct node *currentNode;
+    struct node *nextNode;
 
-  for (nodeCtr = numberOfNodes - 2; nodeCtr >= 0; nodeCtr--)
-  {
-    currentNode = firstNode;
-    nextNode = currentNode->nextPtr;
-
-    for (ctr = 0; ctr <= nodeCtr; ctr++)
+    for (nodeCtr = numberOfNodes - 2; nodeCtr >= 0; nodeCtr--)
     {
-      if (currentNode->ID_Ptr > nextNode->ID_Ptr)
-      {
-        nodeDataCopy = currentNode->data;
-        nodeIDCopy = currentNode->ID_Ptr;
-        currentNode->data = nextNode->data;
-        currentNode->ID_Ptr = nextNode->ID_Ptr;
-        nextNode->data = nodeDataCopy;
-        nextNode->ID_Ptr = nodeIDCopy;
-      }
+      currentNode = firstNode;
+      nextNode = currentNode->nextPtr;
 
-      currentNode = nextNode;
-      nextNode = nextNode->nextPtr;
+      for (ctr = 0; ctr <= nodeCtr; ctr++)
+      {
+        if (currentNode->ID_Ptr > nextNode->ID_Ptr)
+        {
+          nodeDataCopy = currentNode->data;
+          nodeIDCopy = currentNode->ID_Ptr;
+          currentNode->data = nextNode->data;
+          currentNode->ID_Ptr = nextNode->ID_Ptr;
+          nextNode->data = nodeDataCopy;
+          nextNode->ID_Ptr = nodeIDCopy;
+        }
+
+        currentNode = nextNode;
+        nextNode = nextNode->nextPtr;
+      }
     }
+    Serial.println("List sorted - ID");
   }
-  Serial.println("List sorted - ID");
 }
 
 void deleteNode(){
