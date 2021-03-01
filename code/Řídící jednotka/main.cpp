@@ -19,7 +19,7 @@
 
 #define buzzer 12
 #define batterypin A1
-#define nabijenipin 28
+#define nabijenipin 16
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 RTC_DS1307 rtc;
@@ -34,6 +34,7 @@ byte priprava = 5;
 byte minuty = 0;
 byte sekundy = 0;
 int stav;
+int lastStav;
 
 //
 byte pocetTeamu = 0;
@@ -63,8 +64,9 @@ byte NejvyssiID = 0;
 /////////
 unsigned long pomocna = 0;
 
+byte transmit = 0;
 #define CAS_MAX 20.00
-#define RF_DELAY 0.2
+#define RF_DELAY 0.05
 double L = 0, P = 0;
 
 double i = 0;
@@ -80,6 +82,8 @@ byte Delay = 5;
 
 byte menu = 0;
 byte moznost = 0;
+
+byte cyklusBaterie = 2;
 
 byte sipkaVpravo[] = {
     B00000,
@@ -196,19 +200,17 @@ void UtokSmazan();
 void Automaticky();
 void Casomira();
 void najdiNejvyssiID();
-//void CtiSD(char Zapis);
 void OpenCSV();
 void VypisCSV();
 double CtiV();
 void CtiCSV(byte Field);
-//void ZapisSD(char Zapis, double Terc);
-//void Zapis_C_D(char Zapis, String hodnota);
 void ZapisCSV();
 void SmazatZaznam();
 void battery(char zarizeni);
-void nabijeni();
+void nabijeni(byte zarizeni);
 void cursor();
 void NacistTymy();
+void radio();
 
 void setup()
 {
@@ -274,7 +276,7 @@ void setup()
 
 void loop()
 {
-  //if (menu == 12) cursor();
+  radio();
   IndikaceBaterie();
   for (byte i = 0; i < 3; i++)
   {
@@ -1072,6 +1074,7 @@ void Menu()
     lcd.print("Manualne");
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
+    Serial.print("trasmit: ");Serial.println(transmit);
   }
   break;
   case 3: //Priprava
@@ -1155,6 +1158,7 @@ void Menu()
     lcd.print("Spustit");
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
+    Serial.print("trasmit: ");Serial.println(transmit);
   }
   break;
   case 7: //Manualne
@@ -1167,6 +1171,7 @@ void Menu()
     lcd.print("Spustit casomiru");
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
+    Serial.print("trasmit: ");Serial.println(transmit);
   }
   break;
   case 8: //Casomira
@@ -1382,24 +1387,6 @@ void Automaticky()
   lcd.print("Pozor!");
   delay(random(2000, 4000));
   //bzucak;
-}
-
-void IndikaceBaterie()
-{
-  if (menu != 12) {
-    lcd.setCursor(18,0);
-    lcd.print("R");
-    if (digitalRead(nabijenipin) == HIGH) nabijeni();
-    else battery('R');
-    lcd.setCursor(18,1);
-    lcd.print("T");
-    if (HC12.available()) {battery('T');
-      //Serial.println(HC12.read());
-    }
-    else {lcd.print("X");
-      //Serial.println("No radio");
-    }
-  }  
 }
 
 void OpenCSV(){
@@ -1867,6 +1854,43 @@ void deleteLastNode(){
 
 }*/
 
+void IndikaceBaterie()
+{
+  lcd.setCursor(18,0); if (menu != 6 && menu != 7 && menu != 8) lcd.print("R");
+  if (digitalRead(nabijenipin) == HIGH) nabijeni(0);
+  else if (menu != 6 && menu != 7 && menu != 8) battery('R');
+
+  lcd.setCursor(18,1); if (menu != 6 && menu != 7 && menu != 8) lcd.print("T");
+  if (HC12.available()) battery('T');
+  else if (menu != 6 && menu != 7 && menu != 8) lcd.print("X");
+  
+  
+  /*if (menu != 12){//&& menu != 6 && menu != 7 && menu != 8) {
+   
+      lcd.setCursor(18,0);
+      if (menu != 6 && menu != 7 && menu != 8) {
+        lcd.print("R");
+      }
+      if (digitalRead(nabijenipin) == HIGH) {
+        nabijeni(0);
+        Serial.println("nabijeni");
+      }
+      else battery('R');
+      Serial.println(digitalRead(nabijenipin));
+      lcd.setCursor(18,1);
+      if (menu != 6 && menu != 7 && menu != 8)
+        lcd.print("T");
+      if (HC12.available()) {battery('T');
+        Serial.println(stav);
+      }
+      else if (menu != 6 && menu != 7 && menu != 8) {
+        lcd.print("X");
+        //Serial.println("No radio");
+      }
+      //pomocna = millis();
+  }*/ 
+}
+
 void battery(char zarizeni){
   if (zarizeni == 'R') {
     stav = analogRead(batterypin);
@@ -1876,16 +1900,23 @@ void battery(char zarizeni){
     else if (stav >= 640 && stav < 700) stav = 3;
     else if (stav >= 600 && stav < 640) stav = 2;
     else stav = 7;
+    if (stav > 1 && stav < 8) {
+      if (menu != 6 && menu != 7 && menu != 8)
+        lcd.write(byte(stav));
+    }
   }
   else if (zarizeni == 'T') {
-    //if (millis() - pomocna >= 500){
-      pomocna = millis();
       stav = HC12.read();
-    //}
+      if (stav == 8) nabijeni(1);
+      else if (stav > 1 && stav < 8) {
+        if (menu != 6 && menu != 7 && menu != 8){
+          //lcd.write(byte(stav));
+          lcd.write(byte(4));
+        }
+          
+          
+    }
   }
-  if (stav == 8) nabijeni();
-  else lcd.write(byte(stav));
-
   /* 4,2V -> 3,2V
   5V....1024
   4,2V...860
@@ -1897,15 +1928,14 @@ void battery(char zarizeni){
   */
 }
 
-void nabijeni(){
-  for (byte i = 2; i <= 6;){
-    lcd.setCursor(19,0);
-    lcd.write(byte(i));
-    if (millis() - pomocna >= 250)
-    {
-      pomocna = millis();
-      i++;
-    }
+void nabijeni(byte zarizeni){
+  if (millis() - pomocna >= 250)
+  {
+    lcd.setCursor(19,zarizeni);
+    if (menu != 6 && menu != 7 && menu != 8) lcd.write(byte(cyklusBaterie));
+    pomocna = millis();
+    if (cyklusBaterie == 6) cyklusBaterie = 2;
+    else cyklusBaterie++;
   }
 }
 
@@ -1939,4 +1969,34 @@ void NacistTymy() {
   Serial.print("Team2: ");Serial.println(team2);
   Serial.print("Team3: ");Serial.println(team3);
   Serial.print("Pocet teamu: ");Serial.println(pocetTeamu);
+}
+
+void radio(){
+  if (!HC12.available()){
+    switch (menu) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 9:
+      case 10:
+      case 11:
+      case 12:
+      {
+        transmit = 0;
+        for (byte i = 0; i < 5; i++){
+          HC12.write(transmit);
+        }
+      } break;
+      case 6:
+      case 7: {
+        transmit = 1;
+        for (byte i = 0; i < 5; i++){
+          HC12.write(transmit);
+        }
+      } break;
+    }
+  }
 }
