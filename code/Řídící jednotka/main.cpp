@@ -1,11 +1,11 @@
 /*
    *        
-   *        battery T jen kdyz new != last
-   *        rf write utok = true - menu spustit utok // 
-   *        rf write utok = false - menu casomira done
+   *        
+   *        
+   *        num of nodes = 0 
+   *        sd open first node error 
    *        csv - otestovat
    *        automaticke mazani pokud oba casy > 60s ?
-   *        vyber tymu
    *        
   */
 #include <Arduino.h>
@@ -65,7 +65,7 @@ byte NejvyssiID = 0;
 unsigned long pomocna = 0;
 
 byte transmit = 0;
-#define CAS_MAX 20.00
+#define CAS_MAX 60.00
 #define RF_DELAY 0.05
 double L = 0, P = 0;
 
@@ -421,6 +421,7 @@ void loop()
           {
             menu = 1;
             moznost = 0;
+            //x = 0;
           }
           break;
           }
@@ -542,8 +543,12 @@ void loop()
           break;
           case 3:
           {
-            menu = 2;
-            moznost = 1;
+            
+              menu = 2;
+              moznost = 1;
+            
+           
+            
           }
           break;
           }
@@ -562,8 +567,12 @@ void loop()
           break;
           case 3:
           {
-            menu = 2;
-            moznost = 2;
+            
+              menu = 2;
+              moznost = 2;
+           
+              
+      
           }
           break;
           }
@@ -688,11 +697,13 @@ void loop()
             {
             case 0:
             {
-              menu = 0;
-              moznost = pocetTeamu - 1; //
-              OpenCSV();
-              csv.close();
-              NacistTymy();
+              if (team.length() > 0) {
+                menu = 0;
+                moznost = pocetTeamu - 1; //
+                OpenCSV();
+                csv.close();
+                NacistTymy();  
+              }
             }
             break;
             case 11:
@@ -777,21 +788,23 @@ void loop()
         case 4:
         case 5:
         {
-          if (x == 0)
-          {
-            x = 13;
-          }
-          else if (x == 6)
-          {
-            x = 0;
-          }
-          else if (x == 10)
-          {
-            x = 6;
-          }
-          else if (x == 13)
-          {
-            x = 10;
+          if (numberOfNodes != 0){
+            if (x == 0)
+            {
+              x = 13;
+            }
+            else if (x == 6)
+            {
+              x = 0;
+            }
+            else if (x == 10)
+            {
+              x = 6;
+            }
+            else if (x == 13)
+            {
+              x = 10;
+            }
           }
         }
         break;
@@ -879,7 +892,8 @@ void loop()
           {
             case 1:
             {
-              moznost = 0;
+              if (moznost == 0) moznost = 3;
+              else moznost = 0;
             }
             break;
             case 2:
@@ -926,21 +940,23 @@ void loop()
         case 4:
         case 5:
         {
-          if (x == 13)
-          {
-            x = 0;
-          }
-          else if (x == 10)
-          {
-            x = 13;
-          }
-          else if (x == 6)
-          {
-            x = 10;
-          }
-          else if (x == 0)
-          {
-            x = 6;
+          if (numberOfNodes != 0){
+            if (x == 13)
+            {
+              x = 0;
+            }
+            else if (x == 10)
+            {
+              x = 13;
+            }
+            else if (x == 6)
+            {
+              x = 10;
+            }
+            else if (x == 0)
+            {
+              x = 6;
+            }
           }
         }
         break;
@@ -1025,7 +1041,7 @@ void loop()
 
 void Menu()
 {
-  //Serial.println(menu);
+  Serial.print("Menu: ");Serial.println(menu);
   switch (menu)
   {
   case 0: // Vyber tymu
@@ -1187,12 +1203,17 @@ void Menu()
       Casomira();
       lcd.setCursor(0, 3);
       lcd.print(">");
-      ZapisCSV();
-      AddtoList();
-      numberOfNodes++;
-      VypisCSV();
+      if (SD.begin(53)){
+        ZapisCSV();
+        najdiNejvyssiID();
+        if (numberOfNodes == 1) createLinkedList();
+        else AddtoList();
+        sortID(numberOfNodes);
+        currentNode = lastNode;
+        ID = currentNode->ID_Ptr;
+        VypisCSV();
+      }
     }
-    
     lcd.setCursor(0, 0);
     lcd.print("ID");
     lcd.print(ID);
@@ -1291,8 +1312,6 @@ void Menu()
 
 void Casomira()
 {
-  //utok = 1;
-  //HC12.write(utok);
   //tone(buzzer, 2100, 500);
   lcd.clear();
   lcd.print("ID");
@@ -1317,7 +1336,6 @@ void Casomira()
   lcd.setCursor(0, 1);
   while (((levy != true) || (pravy != true)) && (i < CAS_MAX))
   {
-
     lcd.setCursor(0, 1);
     c = millis();
     i = (c - a) / 1000;
@@ -1330,8 +1348,6 @@ void Casomira()
       L = i - RF_DELAY;
       lcd.print(L);
       levy = true;
-      //tone(buzzer, 2090, 500);
-      //Serial.println(HC12.read());
     }
     if ((HC12.read() == 66) && (pravy == false) && (i > 1))
     {
@@ -1340,8 +1356,6 @@ void Casomira()
       P = i - RF_DELAY;
       lcd.print(P);
       pravy = true;
-      //tone(buzzer, 2090, 500);
-      //Serial.println(HC12.read());
     }
   }
   if (i >= CAS_MAX)
@@ -1354,8 +1368,6 @@ void Casomira()
   }
   lcd.setCursor(0,1);
   lcd.print(i);
-  //
-  //digitalWrite(buzzer, LOW);
   levy = false;
   pravy = false;
   cas = String(now.hour()) + ":";
@@ -1364,8 +1376,6 @@ void Casomira()
   cas += String(now.minute());
   datum = String(now.day()) + "/" + String(now.month()) + "/" + String(now.year() - 2000);
   UtokDokonceny = true;
-  //utok = 0;
-  //HC12.write(utok);
 }
 
 void Automaticky()
@@ -1408,9 +1418,9 @@ void UtokSmazan()
   lcd.print(" byl");
   lcd.setCursor(3, 2);
   lcd.print("uspesne smazan");
-  if (ID != 0) //pokud neni pritomna sd karta
+  if (numberOfNodes != 0)
   {
-    SmazatZaznam();
+    SmazatZaznam();;
     deleteNode();
     najdiNejvyssiID();
     if (predchoziMenu == 5) {
@@ -1576,10 +1586,12 @@ void ZapisCSV()
   OpenCSV();
   String dataString = "";
   char data[50];
-  do {
-    csv.nextLine();
-  } while (csv.nextLine());
-  csv.addLine();
+  if (numberOfNodes != 0){
+    do {
+      csv.nextLine();
+    } while (csv.nextLine());
+    csv.addLine();
+  }
   dataString = "ID" + String(ID) + ",";
   if (i < 10) dataString += "0";
   dataString += String(i) + ",";
@@ -1609,79 +1621,81 @@ void SmazatZaznam(){
 
 void createLinkedList()
 {
-  struct node *newNode;
-  double nodeData;
+  if (numberOfNodes != 0) {
+    struct node *newNode;
+    double nodeData;
 
-  OpenCSV();
-  
-  const byte BUFFER_SIZE = 5;
-  char buffer[BUFFER_SIZE + 1];
-  buffer[BUFFER_SIZE] = '\0';
-  int numBuffer = 0;
-  int lastNumBuffer = 0;
+    OpenCSV();
+    
+    const byte BUFFER_SIZE = 5;
+    char buffer[BUFFER_SIZE + 1];
+    buffer[BUFFER_SIZE] = '\0';
+    int numBuffer = 0;
+    int lastNumBuffer = 0;
 
-  firstNode = (struct node *)malloc(sizeof(struct node));
+    firstNode = (struct node *)malloc(sizeof(struct node));
 
-  if (firstNode == NULL || numberOfNodes == 0)
-  {
-    Serial.println("Zadny zaznam");
-  }
-  else
-  {
-    csv.gotoBeginOfFile();
-    do {
-      csv.seekCur(2);
-      csv.readField(numBuffer, buffer, BUFFER_SIZE);
-      if (numBuffer == 0) csv.nextLine();
-    } while (numBuffer == 0);
-    ID = numBuffer;
-    lastNumBuffer = numBuffer;
-    Serial.print(numBuffer);
-    Serial.print("-");
-    nodeData = CtiV();
-    Serial.println(nodeData);
-    firstNode->data = nodeData;
-    firstNode->prevPtr = NULL;
-    firstNode->nextPtr = NULL;
-    firstNode->ID_Ptr = ID;
-
-    lastNode = firstNode;
-    if (numberOfNodes > 1 ){
-      do {
-        csv.gotoBeginOfFile();
-        do {
-          csv.nextLine();
-          csv.seekCur(2);
-          csv.readField(numBuffer, buffer, BUFFER_SIZE);
-        } while (numBuffer <= lastNumBuffer);
-        Serial.print(numBuffer);
-        Serial.print("-");
-        ID = numBuffer;
-        lastNumBuffer = numBuffer;
-        newNode = (struct node *)malloc(sizeof(struct node));
-        if (newNode == NULL){
-          Serial.println("Memory cannot be allocated");
-        }
-        else {
-          nodeData = CtiV();
-          Serial.println(nodeData);
-          newNode->data = nodeData;
-          newNode->ID_Ptr = ID;
-          newNode->nextPtr = NULL;
-          newNode->prevPtr = NULL;
-
-          newNode->prevPtr = lastNode;
-          lastNode->nextPtr = newNode;
-
-          lastNode = newNode;
-
-        } 
-      } while(csv.nextLine());
+    if (firstNode == NULL)
+    {
+      Serial.println("Zadny zaznam");
     }
+    else
+    {
+      csv.gotoBeginOfFile();
+      do {
+        csv.seekCur(2);
+        csv.readField(numBuffer, buffer, BUFFER_SIZE);
+        if (numBuffer == 0) csv.nextLine();
+      } while (numBuffer == 0);
+      ID = numBuffer;
+      lastNumBuffer = numBuffer;
+      Serial.print(numBuffer);
+      Serial.print("-");
+      nodeData = CtiV();
+      Serial.println(nodeData);
+      firstNode->data = nodeData;
+      firstNode->prevPtr = NULL;
+      firstNode->nextPtr = NULL;
+      firstNode->ID_Ptr = ID;
+
+      lastNode = firstNode;
+      if (numberOfNodes > 1 ){
+        do {
+          csv.gotoBeginOfFile();
+          do {
+            csv.nextLine();
+            csv.seekCur(2);
+            csv.readField(numBuffer, buffer, BUFFER_SIZE);
+          } while (numBuffer <= lastNumBuffer);
+          Serial.print(numBuffer);
+          Serial.print("-");
+          ID = numBuffer;
+          lastNumBuffer = numBuffer;
+          newNode = (struct node *)malloc(sizeof(struct node));
+          if (newNode == NULL){
+            Serial.println("Memory cannot be allocated");
+          }
+          else {
+            nodeData = CtiV();
+            Serial.println(nodeData);
+            newNode->data = nodeData;
+            newNode->ID_Ptr = ID;
+            newNode->nextPtr = NULL;
+            newNode->prevPtr = NULL;
+
+            newNode->prevPtr = lastNode;
+            lastNode->nextPtr = newNode;
+
+            lastNode = newNode;
+
+          } 
+        } while(csv.nextLine());
+      }
+    }
+    Serial.println("List created.");
+    csv.close();
+    VypisCSV();
   }
-  Serial.println("List created.");
-  csv.close();
-  VypisCSV();
 }
 
 void AddtoList(){
@@ -1856,13 +1870,16 @@ void deleteLastNode(){
 
 void IndikaceBaterie()
 {
-  lcd.setCursor(18,0); if (menu != 6 && menu != 7 && menu != 8) lcd.print("R");
-  if (digitalRead(nabijenipin) == HIGH) nabijeni(0);
-  else if (menu != 6 && menu != 7 && menu != 8) battery('R');
+  if (menu != 12){
+    lcd.setCursor(18,0); if (menu != 6 && menu != 7 && menu != 8) lcd.print("R");
+    if (digitalRead(nabijenipin) == HIGH) nabijeni(0);
+    else if (menu != 6 && menu != 7 && menu != 8) battery('R');
 
-  lcd.setCursor(18,1); if (menu != 6 && menu != 7 && menu != 8) lcd.print("T");
-  if (HC12.available()) battery('T');
-  else if (menu != 6 && menu != 7 && menu != 8) lcd.print("X");
+    lcd.setCursor(18,1); if (menu != 6 && menu != 7 && menu != 8) lcd.print("T");
+    if (HC12.available()) battery('T');
+    else if (menu != 6 && menu != 7 && menu != 8) lcd.print("X");
+  }
+  
   
   
   /*if (menu != 12){//&& menu != 6 && menu != 7 && menu != 8) {
@@ -1957,17 +1974,23 @@ void NacistTymy() {
         nazevteamu = FileName;
         nazevteamu.remove(nazevteamu.length() - 4,4);
         //Serial.println(nazevteamu);
-        if (pocetTeamu == 1) team1 = nazevteamu;
-        else if (pocetTeamu == 2) team2 = nazevteamu;
-        else team3 = nazevteamu;
+        if (pocetTeamu == 1) {
+          team1 = nazevteamu;
+          Serial.print("Team1: ");Serial.println(team1);
+        }
+        else if (pocetTeamu == 2) {
+          team2 = nazevteamu;
+          Serial.print("Team2: ");Serial.println(team2);
+        }
+        else {
+          team3 = nazevteamu;
+          Serial.print("Team3: ");Serial.println(team3);
+        }
       }
       
     }
     entry.close();
   }
-  Serial.print("Team1: ");Serial.println(team1);
-  Serial.print("Team2: ");Serial.println(team2);
-  Serial.print("Team3: ");Serial.println(team3);
   Serial.print("Pocet teamu: ");Serial.println(pocetTeamu);
 }
 
