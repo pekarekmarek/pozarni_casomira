@@ -728,6 +728,43 @@ void loop()
           } 
         }
         break;
+        case 13: // Zmenit tym
+        {
+          switch (moznost)
+          {
+          case 0:
+          {
+            menu = 3;
+            moznost = 1;
+          }
+          break;
+          case 1:
+          {
+            sortID(numberOfNodes);
+            currentNode = lastNode;
+            ID = currentNode->ID_Ptr;
+            menu = 4;
+            moznost = 3;
+          }
+          break;
+          case 2:
+          {
+            sortNejrychlejsi(numberOfNodes);
+            currentNode = firstNode;
+            ID = currentNode->ID_Ptr;
+            menu = 5;
+            moznost = 3;
+          }
+          break;
+          case 3:
+          {
+            menu = 0;
+            moznost = 0;
+          }
+          break;
+          }
+        }
+        break;
         }
       }
       if (i == 1)
@@ -761,10 +798,17 @@ void loop()
         }
         break;
         case 1:
+        case 13:
         { // 4 Moznosti
           if (moznost == 0)
           {
-            moznost = 3;
+            if (menu == 1) {
+              menu = 13;
+              moznost = 3;
+            } else {
+              menu = 1;
+              moznost = 0;
+            }
           }
           else
           {
@@ -826,7 +870,7 @@ void loop()
           if (x == 13)
           {
             x = 0;
-          }
+          } else x = 13;
         }
         break;
         case 9:
@@ -913,10 +957,16 @@ void loop()
         }
         break;
         case 1:
+        case 13:
         { // 4 Moznosti
           if (moznost == 3)
           {
-            moznost = 0;
+            if (menu == 1) {
+              menu = 13;
+            } else {
+              menu = 1;
+              moznost = 0;
+            }
           }
           else
           {
@@ -978,7 +1028,7 @@ void loop()
           if (x == 0)
           {
             x = 13;
-          }
+          } else x = 0;
         }
         break;
         case 9:
@@ -1305,6 +1355,18 @@ void Menu()
       lcd.blink();
     }
 
+  }
+  break;
+  case 13: //Zmenit tym
+  {
+    lcd.setCursor(1, 0);
+    lcd.print("Odpocet pripravy");
+    lcd.setCursor(1,1);
+    lcd.print("Historie casu");
+    lcd.setCursor(1,2);
+    lcd.print("Nejrychlejsi utoky");
+    lcd.setCursor(1,3);
+    lcd.print("Zmenit tym");
   }
   break;
   }
@@ -1850,23 +1912,6 @@ void deleteLastNode(){
     free(nodeToDelete);
   }
 }
-
-/*void cursor(){
-  lcd.setCursor(x,moznost);
-  if (millis() - pomocna >= 500){
-    pomocna =  millis();
-    if (kurzor == false){
-      lcd.cursor();
-      kurzor = true;
-    } else if (kurzor == true) {
-      lcd.noCursor();
-      kurzor = false;
-    }
-  }
-  lcd.cursor();
- 
-
-}*/
 
 void IndikaceBaterie()
 {
