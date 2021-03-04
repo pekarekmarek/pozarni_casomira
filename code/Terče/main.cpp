@@ -2,7 +2,7 @@
 #include <SoftwareSerial.h>
 SoftwareSerial HC12(10, 11); // HC-12 TX Pin, HC-12 RX Pin
 #define batterypin A1
-#define nabijenipin 6 
+#define nabijenipin 12 
 #define levy 2
 #define pravy 3
 
@@ -33,8 +33,8 @@ void loop() {
       else if (stav >= 700 && stav < 740) stav = 4;
       else if (stav >= 640 && stav < 700) stav = 3;
       else if (stav >= 600 && stav < 640) stav = 2;
-      else if (digitalRead(nabijenipin) == HIGH) stav = 8;
       else stav = 7;
+      if (digitalRead(nabijenipin) == HIGH) stav = 8;
       for (byte i = 0; i < TransmitCount; i++) {
         HC12.write(stav);
         Serial.println(stav);

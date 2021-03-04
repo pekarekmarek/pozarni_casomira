@@ -2,8 +2,7 @@
    *        
    *        
    *        
-   *        num of nodes = 0 
-   *        sd open first node error 
+   *        nabijeni 
    *        csv - otestovat
    *        automaticke mazani pokud oba casy > 60s ?
    *        
@@ -35,6 +34,7 @@ byte minuty = 0;
 byte sekundy = 0;
 int stav;
 int lastStav;
+bool tercenabijeni = true;
 
 //
 byte pocetTeamu = 0;
@@ -63,6 +63,9 @@ byte ID = 1;
 byte NejvyssiID = 0;
 /////////
 unsigned long pomocna = 0;
+unsigned long pomocnanabijeniR = 0;
+unsigned long pomocnanabijeniT = 0;
+unsigned long pomocnaTerce = 0;
 
 byte transmit = 0;
 #define CAS_MAX 60.00
@@ -83,7 +86,8 @@ byte Delay = 5;
 byte menu = 0;
 byte moznost = 0;
 
-byte cyklusBaterie = 2;
+byte baterkaR = 2;
+byte baterkaT = 2;
 
 byte sipkaVpravo[] = {
     B00000,
@@ -1915,45 +1919,58 @@ void deleteLastNode(){
 
 void IndikaceBaterie()
 {
-  if (menu != 12){
-    lcd.setCursor(18,0); if (menu != 6 && menu != 7 && menu != 8) lcd.print("R");
-    if (digitalRead(nabijenipin) == HIGH) nabijeni(0);
-    else if (menu != 6 && menu != 7 && menu != 8) battery('R');
-
-    lcd.setCursor(18,1); if (menu != 6 && menu != 7 && menu != 8) lcd.print("T");
-    if (HC12.available()) battery('T');
-    else if (menu != 6 && menu != 7 && menu != 8) lcd.print("X");
+  if (menu != 12 && menu != 6 && menu != 7 && menu != 8) {
+    lcd.setCursor(18,0); lcd.print("R");
+    if (digitalRead(nabijenipin) == HIGH) {
+      if (millis() - pomocnanabijeniR >= 250)
+      {
+        lcd.setCursor(19,0);
+        lcd.write(byte(baterkaR));
+        pomocnanabijeniR = millis();
+        if (baterkaR == 6) baterkaR = 2;
+        else baterkaR++;
+      }
+    } else {
+      stav = analogRead(batterypin);
+      if (stav >= 820)  stav = 6;
+      else if (stav >= 740 && stav < 820) stav = 5; 
+      else if (stav >= 700 && stav < 740) stav = 4;
+      else if (stav >= 640 && stav < 700) stav = 3;
+      else if (stav >= 600 && stav < 640) stav = 2;
+      else stav = 7;
+      lcd.write(byte(stav));
+    }
   }
-  
-  
-  
-  /*if (menu != 12){//&& menu != 6 && menu != 7 && menu != 8) {
-   
-      lcd.setCursor(18,0);
-      if (menu != 6 && menu != 7 && menu != 8) {
-        lcd.print("R");
-      }
-      if (digitalRead(nabijenipin) == HIGH) {
-        nabijeni(0);
-        Serial.println("nabijeni");
-      }
-      else battery('R');
-      Serial.println(digitalRead(nabijenipin));
-      lcd.setCursor(18,1);
-      if (menu != 6 && menu != 7 && menu != 8)
-        lcd.print("T");
-      if (HC12.available()) {battery('T');
-        Serial.println(stav);
-      }
-      else if (menu != 6 && menu != 7 && menu != 8) {
+
+    if (menu != 12 && menu != 6 && menu != 7 && menu != 8) {lcd.setCursor(18,1); lcd.print("T");}
+    if (HC12.available() || !tercenabijeni) {
+      pomocnaTerce = millis();
+      stav = HC12.read();
+      //Serial.println(stav);
+        if (stav == 8 || !tercenabijeni) {
+          if (millis() - pomocnanabijeniT >= 250)
+          {
+            if (menu != 12 && menu != 6 && menu != 7 && menu != 8) {lcd.setCursor(19,1);
+            lcd.write(byte(baterkaT));}
+            pomocnanabijeniT = millis();
+            if (baterkaT == 6) {baterkaT = 2; tercenabijeni = true;}
+            else {baterkaT++; tercenabijeni = false;}
+            Serial.println(baterkaT);
+          }
+        } else if (stav > 1 && stav < 7 ) {
+          if (menu != 12 && menu != 6 && menu != 7 && menu != 8) lcd.write(byte(stav));
+        }
+       
+    } else if (menu != 12 && menu != 6 && menu != 7 && menu != 8) {
+      if (millis() - pomocnaTerce >= 500){
         lcd.print("X");
-        //Serial.println("No radio");
       }
-      //pomocna = millis();
-  }*/ 
+    }
 }
 
-void battery(char zarizeni){
+
+
+/*void battery(char zarizeni){
   if (zarizeni == 'R') {
     stav = analogRead(batterypin);
     if (stav >= 820)  stav = 6;
@@ -1969,11 +1986,12 @@ void battery(char zarizeni){
   }
   else if (zarizeni == 'T') {
       stav = HC12.read();
-      if (stav == 8) nabijeni(1);
+      Serial.println(stav);
+      if (stav == 8 || !tercenabijeni) nabijeni(1);
       else if (stav > 1 && stav < 8) {
         if (menu != 6 && menu != 7 && menu != 8){
           //lcd.write(byte(stav));
-          lcd.write(byte(4));
+          lcd.write(byte(stav));
         }
           
           
@@ -1988,18 +2006,18 @@ void battery(char zarizeni){
   3,4V...700  40% 
   3,2V...660  20%
   */
-}
+//}
 
-void nabijeni(byte zarizeni){
-  if (millis() - pomocna >= 250)
+/*void nabijeni(byte zarizeni){
+  if (millis() - pomocnanabijeni >= 250)
   {
     lcd.setCursor(19,zarizeni);
     if (menu != 6 && menu != 7 && menu != 8) lcd.write(byte(cyklusBaterie));
-    pomocna = millis();
-    if (cyklusBaterie == 6) cyklusBaterie = 2;
-    else cyklusBaterie++;
+    pomocnanabijeni = millis();
+    if (cyklusBaterie == 6) {cyklusBaterie = 2; tercenabijeni = true;}
+    else {cyklusBaterie++; tercenabijeni = false;}
   }
-}
+}*/
 
 void NacistTymy() {
   root = SD.open("/");
