@@ -16,7 +16,7 @@
 #include "RTClib.h"
 #include <CSVFile.h>
 
-#define buzzer 12
+#define buzzer 7
 #define batterypin A1
 #define nabijenipin 16
 
@@ -344,7 +344,7 @@ void loop()
               menu = 1;
               moznost = 0;
               najdiNejvyssiID();
-              VypisCSV();
+              //VypisCSV();
               createLinkedList();
               //sortNejrychlejsi(numberOfNodes);
               currentNode = firstNode;
@@ -1378,7 +1378,7 @@ void Menu()
 
 void Casomira()
 {
-  //tone(buzzer, 2100, 500);
+  tone(buzzer, 2080, 500);
   lcd.clear();
   lcd.print("ID");
   a = millis();
@@ -1715,10 +1715,10 @@ void createLinkedList()
       } while (numBuffer == 0);
       ID = numBuffer;
       lastNumBuffer = numBuffer;
-      Serial.print(numBuffer);
-      Serial.print("-");
+      //Serial.print(numBuffer);
+      //Serial.print("-");
       nodeData = CtiV();
-      Serial.println(nodeData);
+      //Serial.println(nodeData);
       firstNode->data = nodeData;
       firstNode->prevPtr = NULL;
       firstNode->nextPtr = NULL;
@@ -1733,8 +1733,8 @@ void createLinkedList()
             csv.seekCur(2);
             csv.readField(numBuffer, buffer, BUFFER_SIZE);
           } while (numBuffer <= lastNumBuffer);
-          Serial.print(numBuffer);
-          Serial.print("-");
+          //Serial.print(numBuffer);
+          //Serial.print("-");
           ID = numBuffer;
           lastNumBuffer = numBuffer;
           newNode = (struct node *)malloc(sizeof(struct node));
@@ -1743,7 +1743,7 @@ void createLinkedList()
           }
           else {
             nodeData = CtiV();
-            Serial.println(nodeData);
+            //Serial.println(nodeData);
             newNode->data = nodeData;
             newNode->ID_Ptr = ID;
             newNode->nextPtr = NULL;
@@ -1760,7 +1760,7 @@ void createLinkedList()
     }
     Serial.println("List created.");
     csv.close();
-    VypisCSV();
+    //VypisCSV();
   }
 }
 
@@ -1955,7 +1955,7 @@ void IndikaceBaterie()
             pomocnanabijeniT = millis();
             if (baterkaT == 6) {baterkaT = 2; tercenabijeni = true;}
             else {baterkaT++; tercenabijeni = false;}
-            Serial.println(baterkaT);
+            //Serial.println(baterkaT);
           }
         } else if (stav > 1 && stav < 7 ) {
           if (menu != 12 && menu != 6 && menu != 7 && menu != 8) lcd.write(byte(stav));
@@ -1997,7 +1997,7 @@ void IndikaceBaterie()
           
     }
   }
-  /* 4,2V -> 3,2V
+   4,2V -> 3,2V
   5V....1024
   4,2V...860
   4V.....820  100%
@@ -2005,8 +2005,8 @@ void IndikaceBaterie()
   3,6V...740  60%
   3,4V...700  40% 
   3,2V...660  20%
-  */
-//}
+  
+}*/
 
 /*void nabijeni(byte zarizeni){
   if (millis() - pomocnanabijeni >= 250)
