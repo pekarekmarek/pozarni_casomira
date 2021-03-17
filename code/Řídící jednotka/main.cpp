@@ -1,7 +1,7 @@
 /*
    *        
    *        
-   *        
+   *        predcasny start
    *        nabijeni 
    *        csv - otestovat
    *        automaticke mazani pokud oba casy > 60s ?
@@ -547,12 +547,8 @@ void loop()
           break;
           case 3:
           {
-            
-              menu = 2;
-              moznost = 1;
-            
-           
-            
+            menu = 2;
+            moznost = 1; 
           }
           break;
           }
@@ -571,12 +567,8 @@ void loop()
           break;
           case 3:
           {
-            
-              menu = 2;
-              moznost = 2;
-           
-              
-      
+            menu = 2;
+            moznost = 2;
           }
           break;
           }
@@ -762,8 +754,10 @@ void loop()
           break;
           case 3:
           {
-            menu = 0;
-            moznost = 0;
+            if (SD.begin(53)){
+              menu = 0;
+              moznost = 0;
+            } 
           }
           break;
           }
@@ -1112,7 +1106,7 @@ void Menu()
       }
     }
     lcd.setCursor(1,3);
-    lcd.print("Novy team");
+    lcd.print("Novy tym");
     /*lcd.home();
     lcd.print("Vyber teamu:");
     for (byte i = 1; i <= pocetTeamu; i++){
@@ -1946,7 +1940,7 @@ void IndikaceBaterie()
     if (HC12.available() || !tercenabijeni) {
       pomocnaTerce = millis();
       stav = HC12.read();
-      //Serial.println(stav);
+      Serial.println(stav);
         if (stav == 8 || !tercenabijeni) {
           if (millis() - pomocnanabijeniT >= 250)
           {
