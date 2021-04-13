@@ -85,23 +85,23 @@ byte moznost = 0;
 byte baterkaR = 2;
 byte baterkaT = 2;
 
-byte sipkaVpravo[] = {
+byte sipkaNahoru[] = {
     B00000,
     B00100,
-    B00010,
-    B11111,
-    B00010,
+    B01110,
+    B10101,
     B00100,
-    B00000,
+    B00100,
+    B00100,
     B00000};
-byte sipkaVlevo[] = {
+byte sipkaDolu[] = {
     B00000,
     B00100,
-    B01000,
-    B11111,
-    B01000,
     B00100,
-    B00000,
+    B00100,
+    B10101,
+    B01110,
+    B00100,
     B00000};
 byte baterie100[] = {
     B01110,
@@ -219,8 +219,8 @@ void setup()
   lcd.init();
   lcd.clear();
   lcd.backlight();
-  lcd.createChar(0, sipkaVlevo);
-  lcd.createChar(1, sipkaVpravo);
+  lcd.createChar(0, sipkaDolu);
+  lcd.createChar(1, sipkaNahoru);
   lcd.createChar(6, baterie100);
   lcd.createChar(5, baterie80);
   lcd.createChar(4, baterie60);
@@ -1188,9 +1188,11 @@ void Menu()
       lcd.setCursor(14, 3);
       lcd.print("Smazat");
       lcd.setCursor(7, 3);
-      lcd.write(byte(0));
+      //lcd.write(byte(0));
+      lcd.write(127);
       lcd.setCursor(11, 3);
-      lcd.write(byte(1));
+      lcd.write(126);
+      //lcd.write(byte(1));
     }
     else {
       lcd.setCursor(3,1);
@@ -1362,7 +1364,10 @@ void Menu()
 
 void Casomira()
 {
-  tone(buzzer, 2080, 500);
+  //tone(buzzer, 2080, 500);
+  digitalWrite(buzzer, HIGH);
+  delay(200);
+  digitalWrite(buzzer, LOW);
   lcd.clear();
   lcd.print("ID");
   a = millis();
@@ -1564,6 +1569,11 @@ void Odpocet()
       break;
 
   } while ((minuty != 0) || (sekundy != 0));
+  if (minuty == 0 && sekundy == 0){
+    digitalWrite(buzzer, HIGH);
+    delay(200);
+    digitalWrite(buzzer, LOW);
+  }
 }
 
 void VypisCSV(){
