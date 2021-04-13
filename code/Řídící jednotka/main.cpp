@@ -1,12 +1,9 @@
 /*
-   *        
-   *        
-   *        predcasny start
-   *        nabijeni 
-   *        csv - otestovat
-   *        automaticke mazani pokud oba casy > 60s ?
-   *        
-  */
+  *        
+  *        
+  *     
+  *        
+*/
 #include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
@@ -44,7 +41,6 @@ String team1 = "";
 String team2 = "";
 String team3 = "";
 
-//bool kurzor = false;
 char znakyMale[2][20] = {{'a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t'},
 {'u','v','w','x','y','z','0','1','2','3','4','5','6','7','8','9','_'}};
 char znakyVelke[2][20] = {{'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T'},
@@ -248,9 +244,10 @@ void setup()
   }
   if (!rtc.begin())
   {
+    lcd.clear();
+    lcd.print("chybi RTC");
     Serial.print("chybi RTC");
-    Serial.flush();
-    abort();
+    delay(1000);
   }
   if (!rtc.isrunning())
   {
@@ -259,6 +256,7 @@ void setup()
     lcd.print("RTC reset");
     Serial.println("RTC se resetl, nastav cas");
     //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    delay(1000);
   }
   for (byte i = 0; i < 3; i++)
   {
@@ -275,7 +273,6 @@ void setup()
   currentNode = firstNode;
   najdiNejvyssiID();*/
   lcd.clear();
-
 }
 
 void loop()
@@ -337,6 +334,7 @@ void loop()
             {
               menu = 12;
               moznost = 3;
+              team = "";
             }
             break;
             }
@@ -797,21 +795,16 @@ void loop()
         break;
         case 1:
         case 13:
-        { // 4 Moznosti
-          if (moznost == 0)
-          {
+        {
+          if (moznost == 0){
             if (menu == 1) {
-              menu = 13;
+              if (SD.begin(53)) menu = 13;
               moznost = 3;
             } else {
               menu = 1;
               moznost = 0;
             }
-          }
-          else
-          {
-            moznost--;
-          }
+          } else moznost--;
         }
         break;
         case 2: // 3 Moznosti
@@ -865,10 +858,12 @@ void loop()
         break;
         case 8:
         {
-          if (x == 13)
-          {
-            x = 0;
-          } else x = 13;
+          if (numberOfNodes != 0){
+            if (x == 13)
+            {
+              x = 0;
+            } else x = 13;
+          }
         }
         break;
         case 9:
@@ -956,20 +951,18 @@ void loop()
         break;
         case 1:
         case 13:
-        { // 4 Moznosti
-          if (moznost == 3)
-          {
+        {
+          if (moznost == 3){
             if (menu == 1) {
-              menu = 13;
+              if (SD.begin(53)) {
+                menu = 13;
+                moznost = 3;
+              } else moznost = 0;
             } else {
               menu = 1;
               moznost = 0;
             }
-          }
-          else
-          {
-            moznost++;
-          }
+          } else moznost++;
         }
         break;
         case 2: // 3 Moznosti
@@ -1023,10 +1016,12 @@ void loop()
         break;
         case 8:
         {
-          if (x == 0)
-          {
-            x = 13;
-          } else x = 0;
+          if (numberOfNodes != 0){
+            if (x == 0)
+            {
+              x = 13;
+            } else x = 0;
+          }
         }
         break;
         case 9:
@@ -1177,21 +1172,16 @@ void Menu()
       lcd.print("ID");
       lcd.print(ID);
       lcd.print(" ");
-      //CtiSD('C');
       CtiCSV(5);
       lcd.print(" ");
-      //CtiSD('D');
       CtiCSV(4);
       lcd.setCursor(0, 1);
-      //CtiSD('V');
       CtiCSV(1);
       lcd.setCursor(7, 1);
       lcd.print("L:");
-      //CtiSD('L');
       CtiCSV(2);
       lcd.setCursor(7, 2);
       lcd.print("P:");
-      //CtiSD('P');
       CtiCSV(3);
       lcd.setCursor(1, 3);
       lcd.print("Zpet");
@@ -1285,7 +1275,7 @@ void Menu()
     lcd.setCursor(1, 3);
     lcd.print("Zpet");
     lcd.setCursor(14, 3);
-    lcd.print("Smazat");
+    if (numberOfNodes != 0) lcd.print("Smazat");
     
   }
   break;
