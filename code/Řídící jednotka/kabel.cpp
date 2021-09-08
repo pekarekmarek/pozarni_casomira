@@ -16,8 +16,8 @@
 #define buzzer 7
 #define batterypin A1
 #define nabijenipin 16
-#define LP 4
-#define PP 5
+#define LP 5
+#define PP 6
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 RTC_DS1307 rtc;
@@ -209,7 +209,7 @@ void setup()
 {
   Serial.begin(9600);
   //HC12.begin(115200);
-  //lcd.init();
+  lcd.init();
   lcd.clear();
   lcd.backlight();
   lcd.createChar(0, sipkaDolu);
@@ -260,6 +260,10 @@ void setup()
   pinMode(buzzer, OUTPUT);
   pinMode(batterypin, INPUT);
   pinMode(nabijenipin, INPUT);
+  pinMode(LP, INPUT_PULLUP);
+  pinMode(PP, INPUT_PULLUP);
+  digitalWrite(LP, HIGH);
+  digitalWrite(PP, HIGH);
   NacistTymy();
   if (pocetTeamu == 0) menu = 1;
   lcd.clear();
@@ -1337,6 +1341,8 @@ void Casomira()
   digitalWrite(buzzer, HIGH);
   delay(200);
   digitalWrite(buzzer, LOW);
+  //digitalWrite(LP, LOW);
+  //digitalWrite(PP, LOW);
   lcd.clear();
   lcd.print("ID");
   a = millis();
@@ -1362,22 +1368,23 @@ void Casomira()
   {
     lcd.setCursor(0, 1);
     c = millis();
-    i = (c - a) / 1000;
+    i = (c - a) / 1000.000;
     lcd.print(i);
+    //lcd.print(random(10));
     //Serial.println(HC12.read());
-    if ((digitalRead(LP) == HIGH) && (levy == false) && (i > 1))
+    if ((digitalRead(LP) == LOW) && (levy == false) && (i > 1))
     {
       lcd.setCursor(8, 1);
       lcd.print("L: ");
-      L = i + (random(10)/1000);
+      L = i;
       lcd.print(L);
       levy = true;
     }
-    if ((digitalRead(PP)) && (pravy == false) && (i > 1))
+    if ((digitalRead(PP) == LOW) && (pravy == false) && (i > 1))
     {
       lcd.setCursor(8, 2);
       lcd.print("P: ");
-      P = i + (random(10)/1000);
+      P = i;
       lcd.print(P);
       pravy = true;
     }
@@ -1463,7 +1470,7 @@ void najdiNejvyssiID(){
 
   OpenCSV();
   
-  const byte BUFFER_SIZE = 5;
+  const byte BUFFER_SIZE = 6;
   char buffer[BUFFER_SIZE + 1];
   buffer[BUFFER_SIZE] = '\0';
 
@@ -1654,7 +1661,7 @@ void createLinkedList()
 
     OpenCSV();
     
-    const byte BUFFER_SIZE = 5;
+    const byte BUFFER_SIZE = 6;
     char buffer[BUFFER_SIZE + 1];
     buffer[BUFFER_SIZE] = '\0';
     int numBuffer = 0;
@@ -1881,7 +1888,7 @@ void deleteLastNode(){
 void IndikaceBaterie()
 {
   if (menu != 12 && menu != 6 && menu != 7 && menu != 8) {
-    lcd.setCursor(18,0); lcd.print("R");
+    lcd.setCursor(19,0); 
     if (digitalRead(nabijenipin) == HIGH) {
       if (millis() - pomocnanabijeniR >= 250)
       {
@@ -1905,34 +1912,7 @@ void IndikaceBaterie()
 }
 
 
-
-/*void battery(char zarizeni){
-  if (zarizeni == 'R') {
-    stav = analogRead(batterypin);
-    if (stav >= 820)  stav = 6;
-    else if (stav >= 740 && stav < 820) stav = 5; 
-    else if (stav >= 700 && stav < 740) stav = 4;
-    else if (stav >= 640 && stav < 700) stav = 3;
-    else if (stav >= 600 && stav < 640) stav = 2;
-    else stav = 7;
-    if (stav > 1 && stav < 8) {
-      if (menu != 6 && menu != 7 && menu != 8)
-        lcd.write(byte(stav));
-    }
-  }
-  else if (zarizeni == 'T') {
-      stav = HC12.read();
-      Serial.println(stav);
-      if (stav == 8 || !tercenabijeni) nabijeni(1);
-      else if (stav > 1 && stav < 8) {
-        if (menu != 6 && menu != 7 && menu != 8){
-          //lcd.write(byte(stav));
-          lcd.write(byte(stav));
-        }
-          
-          
-    }
-  }
+/*
    4,2V -> 3,2V
   5V....1024
   4,2V...860
@@ -1942,17 +1922,6 @@ void IndikaceBaterie()
   3,4V...700  40% 
   3,2V...660  20%
   
-}*/
-
-/*void nabijeni(byte zarizeni){
-  if (millis() - pomocnanabijeni >= 250)
-  {
-    lcd.setCursor(19,zarizeni);
-    if (menu != 6 && menu != 7 && menu != 8) lcd.write(byte(cyklusBaterie));
-    pomocnanabijeni = millis();
-    if (cyklusBaterie == 6) {cyklusBaterie = 2; tercenabijeni = true;}
-    else {cyklusBaterie++; tercenabijeni = false;}
-  }
 }*/
 
 void NacistTymy() {
